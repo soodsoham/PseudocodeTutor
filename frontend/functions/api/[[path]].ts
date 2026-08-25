@@ -81,7 +81,12 @@ async function readBody(request: Request): Promise<JsonRecord> {
 
 async function geminiText(env: Env, prompt: string, maxTokens = 2000) {
   if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured')
-  const model = env.GEMINI_MODEL || 'gemini-2.5-flash'
+  const models = Array.from(new Set([
+    env.GEMINI_MODEL || 'gemini-2.5-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+  ]))
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`,
     {
@@ -123,18 +128,22 @@ async function moderateSubmission(env: Env, text: string, imageSamples: string[]
       parts.push({ inline_data: { mime_type: match[1], data: match[2] } })
     }
   }
-  const moderateParts = async (partsToSend: Array<Record<string, unknown>>) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: partsToSend }], generationConfig: { maxOutputTokens: 300, temperature: 0.1 } }),
-  })
-  let response = await moderateParts(parts)
-  // A PDF with several rendered pages can exceed Gemini's multimodal request
-  // limit. Retry with the first reduced page sample before failing closed.
-  if (!response.ok && imageSamples.length > 1) {
-    response = await moderateParts([parts[0], parts[1]])
+  let response: Response | null = null
+  for (const model of models) {
+    const moderateParts = async (partsToSend: Array<Record<string, unknown>>) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: partsToSend }], generationConfig: { maxOutputTokens: 300, temperature: 0.1 } }),
+    })
+    response = await moderateParts(parts)
+    // A PDF with several rendered pages can exceed a model's multimodal
+    // request limit. Retry that model with the first reduced page sample.
+    if (!response.ok && imageSamples.length > 1) {
+      response = await moderateParts([parts[0], parts[1]])
+    }
+    if (response.ok) break
   }
-  if (!response.ok) throw new Error(`Gemini moderation failed (${response.status})`)
+  if (!response?.ok) throw new Error(`Gemini moderation failed (${response?.status ?? 'unavailable'})`)
   const resultBody = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> }
   const responseParts = resultBody.candidates?.[0]?.content?.parts ?? []
   const visible = responseParts.filter((part) => !part.thought && part.text).map((part) => part.text)
