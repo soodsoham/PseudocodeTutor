@@ -461,6 +461,7 @@ function App() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/my-submissions" element={<MySubmissionsPage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/problem/:problemId" element={<CommunityPage />} />
           <Route path="/moderate" element={<ModerationPage />} />
         </Routes>
       </div>

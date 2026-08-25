@@ -253,15 +253,17 @@ async function listProblems(request: Request, env: Env) {
   const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0)
   const sql = sqlFor(env)
   const rows = await sql.query(
-    `select id,title,description,difficulty,board,inputs,outputs,constraints,created_at
-     from public.community_problems
-     where is_public=true
-       and coalesce(lower(status),'approved') <> 'rejected'
-       and coalesce(lower(moderation_status),'approved') <> 'rejected'
-       and ($1='' or regexp_replace(lower(board),'[^a-z0-9]','','g')=regexp_replace(lower($1),'[^a-z0-9]','','g'))
-       and ($2='' or lower(difficulty)=lower($2))
-       and ($3='' or title ilike '%' || $3 || '%')
-     order by created_at desc limit $4 offset $5`,
+    `select p.id,p.title,p.description,p.difficulty,p.board,p.inputs,p.outputs,p.constraints,p.created_at,
+       coalesce(v.upvotes,0)::integer as upvote_count, coalesce(v.downvotes,0)::integer as downvote_count
+     from public.community_problems p
+     left join lateral (select count(*) filter (where vote='up') as upvotes, count(*) filter (where vote='down') as downvotes from public.community_problem_votes where problem_id=p.id) v on true
+     where p.is_public=true
+       and coalesce(lower(p.status),'approved') <> 'rejected'
+       and coalesce(lower(p.moderation_status),'approved') <> 'rejected'
+       and ($1='' or regexp_replace(lower(p.board),'[^a-z0-9]','','g')=regexp_replace(lower($1),'[^a-z0-9]','','g'))
+       and ($2='' or lower(p.difficulty)=lower($2))
+       and ($3='' or p.title ilike '%' || $3 || '%')
+     order by p.created_at desc limit $4 offset $5`,
     [board, difficulty, search, limit, offset],
   )
   return json({ problems: rows, total: rows.length })
@@ -275,12 +277,27 @@ async function handleCommunity(context: Context, path: string) {
   const attachmentListMatch = path.match(/^community\/problems\/([0-9a-f-]+)\/attachments$/i)
   const attachmentOpenMatch = path.match(/^community\/attachments\/([a-zA-Z0-9._-]+)$/)
 
+  // Keep the interaction tables available on deployments where migrations have
+  // not yet been run manually.
+  await sql.query(`create table if not exists public.community_problem_votes (
+    problem_id uuid not null references public.community_problems(id) on delete cascade,
+    user_id text not null,
+    vote text not null check (vote in ('up','down')),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    primary key (problem_id, user_id)
+  )`)
+  await sql.query(`create index if not exists community_problem_votes_problem_idx on public.community_problem_votes(problem_id)`)
+
   if (request.method === 'GET' && path === 'community/problems') return listProblems(request, env)
 
   if (request.method === 'GET' && problemMatch) {
     const problems = await sql.query(
-      `select id,title,description,difficulty,board,inputs,outputs,constraints,created_at
-       from public.community_problems where id=$1 and is_public=true and status='approved' and moderation_status='approved' limit 1`,
+      `select p.id,p.title,p.description,p.difficulty,p.board,p.inputs,p.outputs,p.constraints,p.created_at,
+        coalesce(v.upvotes,0)::integer as upvote_count, coalesce(v.downvotes,0)::integer as downvote_count
+       from public.community_problems p
+       left join lateral (select count(*) filter (where vote='up') as upvotes, count(*) filter (where vote='down') as downvotes from public.community_problem_votes where problem_id=p.id) v on true
+       where p.id=$1 and p.is_public=true and p.status='approved' and p.moderation_status='approved' limit 1`,
       [problemMatch[1]],
     )
     if (!problems[0]) return json({ problem: null, solutions: [], error: 'Problem not found' }, 404)
@@ -289,6 +306,35 @@ async function handleCommunity(context: Context, path: string) {
       [problemMatch[1]],
     )
     return json({ problem: problems[0], solutions })
+  }
+
+  const voteMatch = path.match(/^community\/problems\/([0-9a-f-]+)\/vote$/i)
+  if (request.method === 'POST' && voteMatch) {
+    const userId = await requireUser(request, env)
+    const vote = body.vote === 'down' ? 'down' : body.vote === 'up' ? 'up' : ''
+    if (!vote) return json({ ok: false, error: 'Vote must be up or down.' }, 400)
+    const problem = await sql.query('select 1 from public.community_problems where id=$1 and is_public=true', [voteMatch[1]])
+    if (!problem[0]) return json({ ok: false, error: 'Problem not found.' }, 404)
+    const existing = await sql.query('select vote from public.community_problem_votes where problem_id=$1 and user_id=$2', [voteMatch[1], userId])
+    if (existing[0]?.vote === vote) {
+      await sql.query('delete from public.community_problem_votes where problem_id=$1 and user_id=$2', [voteMatch[1], userId])
+    } else {
+      await sql.query(`insert into public.community_problem_votes(problem_id,user_id,vote) values($1,$2,$3)
+        on conflict(problem_id,user_id) do update set vote=excluded.vote,updated_at=now()`, [voteMatch[1], userId, vote])
+    }
+    const counts = await sql.query(`select count(*) filter (where vote='up')::integer as upvotes, count(*) filter (where vote='down')::integer as downvotes from public.community_problem_votes where problem_id=$1`, [voteMatch[1]])
+    return json({ ok: true, upvotes: counts[0]?.upvotes ?? 0, downvotes: counts[0]?.downvotes ?? 0, vote: existing[0]?.vote === vote ? null : vote })
+  }
+
+  if (request.method === 'POST' && path === 'community/report') {
+    const reporterId = await currentUserId(request, env)
+    const problemId = clean(body.problem_id, 80)
+    const reason = clean(body.reason, 1000)
+    if (!problemId || !reason) return json({ ok: false, error: 'A problem and report reason are required.' }, 400)
+    const problem = await sql.query('select 1 from public.community_problems where id=$1 and is_public=true', [problemId])
+    if (!problem[0]) return json({ ok: false, error: 'Problem not found.' }, 404)
+    await sql.query(`insert into public.moderation_queue(problem_id,content_type,reporter_id,reason,status) values($1,'problem_report',$2,$3,'pending')`, [problemId, reporterId, reason])
+    return json({ ok: true, message: 'Report submitted for review.' })
   }
 
   if (request.method === 'POST' && path === 'community/submit') {

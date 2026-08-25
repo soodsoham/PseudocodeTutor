@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
@@ -24,6 +24,8 @@ interface CommunityProblem {
   language: string
   created_at?: string
   solutionCount: number
+  upvoteCount: number
+  downvoteCount: number
   moderationStatus?: 'approved' | 'pending' | 'rejected'
 }
 
@@ -214,6 +216,7 @@ function fileToBase64(file: File): Promise<string> {
 
 function CommunityPage() {
   const navigate = useNavigate()
+  const { problemId: sharedProblemId } = useParams<{ problemId?: string }>()
   const user = useAuthStore((state) => state.user)
   const activeBoard = useSettingsStore((state) => state.board)
   const setProblemCard = useEditorStore((state) => state.setProblemCard)
@@ -260,6 +263,8 @@ function CommunityPage() {
   >(null)
   const [showNewProblemForm, setShowNewProblemForm] = useState(false)
   const [submitMessage, setSubmitMessage] = useState<string | null>(null)
+  const [reportReason, setReportReason] = useState('')
+  const [isReporting, setIsReporting] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
@@ -349,6 +354,8 @@ function CommunityPage() {
           language: typeof problem.language === 'string' ? problem.language : 'python',
           created_at: typeof problem.created_at === 'string' ? problem.created_at : undefined,
           solutionCount: solutionCountByProblem.get(String(problemId)) ?? 0,
+          upvoteCount: Number(problem.upvote_count) || 0,
+          downvoteCount: Number(problem.downvote_count) || 0,
           moderationStatus,
         }
       }).filter((problem) => problem.moderationStatus !== 'rejected') as CommunityProblem[]
@@ -374,6 +381,12 @@ function CommunityPage() {
   useEffect(() => {
     void fetchProblems()
   }, [accountKey, activeBoard])
+
+  useEffect(() => {
+    if (!sharedProblemId || selectedProblem || problems.length === 0) return
+    const match = problems.find((problem) => String(problem.id) === sharedProblemId)
+    if (match) setSelectedProblem(match)
+  }, [problems, selectedProblem, sharedProblemId])
 
   useEffect(() => {
     const refreshWhenVisible = () => {
@@ -1071,6 +1084,57 @@ function CommunityPage() {
   const canManageSolution = (solution: CommunitySolution) =>
     user !== null && solution.author_id === user.id
 
+  const handleVote = async (vote: 'up' | 'down') => {
+    if (!selectedProblem) return
+    if (!user) {
+      setSubmitMessage('Login required to vote on problems.')
+      return
+    }
+    try {
+      const response = await fastapi.post<{ upvotes: number; downvotes: number }>(
+        `/community/problems/${encodeURIComponent(String(selectedProblem.id))}/vote`,
+        { vote },
+      )
+      const next = {
+        ...selectedProblem,
+        upvoteCount: Number(response.data.upvotes) || 0,
+        downvoteCount: Number(response.data.downvotes) || 0,
+      }
+      setSelectedProblem(next)
+      setProblems((current) => current.map((problem) => String(problem.id) === String(next.id) ? next : problem))
+    } catch {
+      setSubmitMessage('Could not record your vote right now.')
+    }
+  }
+
+  const handleReport = async () => {
+    if (!selectedProblem || !reportReason.trim()) return
+    setIsReporting(true)
+    try {
+      await fastapi.post('/community/report', {
+        problem_id: String(selectedProblem.id),
+        reason: reportReason.trim(),
+      })
+      setReportReason('')
+      setSubmitMessage('Report submitted for review.')
+    } catch {
+      setSubmitMessage('Could not submit the report right now.')
+    } finally {
+      setIsReporting(false)
+    }
+  }
+
+  const handleCopyProblemLink = async () => {
+    if (!selectedProblem) return
+    const link = `${window.location.origin}/problem/${selectedProblem.id}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setSubmitMessage('Problem link copied.')
+    } catch {
+      setSubmitMessage(link)
+    }
+  }
+
   const handleStartEditSolution = (solution: CommunitySolution) => {
     if (!canManageSolution(solution)) {
       return
@@ -1243,6 +1307,7 @@ function CommunityPage() {
               style={{ alignSelf: 'flex-start' }}
               onClick={() => {
                 setSelectedProblem(null)
+                navigate('/community')
                 setSolutions([])
                 setAiSolution(null)
                 setExpandedAiSolution(false)
@@ -1281,6 +1346,29 @@ function CommunityPage() {
               style={{ fontSize: '13px' }}
             >
               {selectedProblem.difficulty.toUpperCase()}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button type="button" className="terminal-button" onClick={() => void handleVote('up')}>
+                [ ▲ {selectedProblem.upvoteCount} ]
+              </button>
+              <button type="button" className="terminal-button" onClick={() => void handleVote('down')}>
+                [ ▼ {selectedProblem.downvoteCount} ]
+              </button>
+              <button type="button" className="terminal-button" onClick={() => void handleCopyProblemLink()}>
+                [ Copy Link ]
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value)}
+                placeholder="Report reason..."
+                aria-label="Report reason"
+                style={{ flex: '1 1 260px', minWidth: 0, padding: '8px 10px', font: 'inherit', color: '#ffffff', background: '#43464f', border: '1px solid currentColor' }}
+              />
+              <button type="button" className="terminal-button" disabled={isReporting || !reportReason.trim()} onClick={() => void handleReport()}>
+                {isReporting ? '[ Reporting... ]' : '[ Report ]'}
+              </button>
             </div>
             <div style={{ whiteSpace: 'pre-wrap', color: '#ffffff', fontSize: '14px' }}>
               {selectedProblem.description}
@@ -1730,7 +1818,10 @@ function CommunityPage() {
                       className="interactive-hover-card community-problem-card"
                       key={problem.id}
                       type="button"
-                      onClick={() => setSelectedProblem(problem)}
+                      onClick={() => {
+                        setSelectedProblem(problem)
+                        navigate(`/problem/${problem.id}`)
+                      }}
                       style={{
                         textAlign: 'left',
                         background: 'transparent',
@@ -1755,6 +1846,9 @@ function CommunityPage() {
                       </div>
                       <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
                         Solutions: {problem.solutionCount}
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '6px' }}>
+                        ▲ {problem.upvoteCount} · ▼ {problem.downvoteCount}
                       </div>
                       {problem.moderationStatus && problem.moderationStatus !== 'approved' && (
                         <div
