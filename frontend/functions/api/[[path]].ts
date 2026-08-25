@@ -47,7 +47,18 @@ async function currentUserId(request: Request, env: Env): Promise<string | null>
     const { payload } = await jwtVerify(token, jwks)
     return typeof payload.sub === 'string' ? payload.sub : null
   } catch {
-    return null
+    // Neon Auth's browser adapter may expose its active opaque session token
+    // when the JWT exchange endpoint cannot issue a token. Validate that
+    // bearer against Neon Auth's server-side session store as a fallback.
+    try {
+      const rows = await sqlFor(env).query(
+        'select "userId" from neon_auth.session where token=$1 and "expiresAt">now() limit 1',
+        [token],
+      )
+      return typeof rows[0]?.userId === 'string' ? rows[0].userId : null
+    } catch {
+      return null
+    }
   }
 }
 

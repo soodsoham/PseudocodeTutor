@@ -11,9 +11,11 @@ fastapi.interceptors.request.use(async (config) => {
     | ({ access_token?: string; token?: string } & Record<string, unknown>)
     | null
   if (session) {
-    const { token, error } = await getAuthJwt()
-    if (error || !token) {
-      throw new Error(error?.message || 'Could not obtain an authentication token.')
+    const opaqueSessionToken = session.access_token || session.token
+    const jwtResult = await getAuthJwt()
+    const token = jwtResult.token || opaqueSessionToken
+    if (!token) {
+      throw new Error(jwtResult.error?.message || 'Could not obtain an authentication token.')
     }
     config.headers.Authorization = `Bearer ${token}`
   }
