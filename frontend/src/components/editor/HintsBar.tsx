@@ -9,6 +9,7 @@ function HintsBar() {
   const problemAttachmentText = useEditorStore((state) => state.problemAttachmentText)
   const pseudocode = useEditorStore((state) => state.pseudocode)
   const generatedCode = useEditorStore((state) => state.generatedCode)
+  const activePseudoLine = useEditorStore((state) => state.activePseudoLine)
   const language = useSettingsStore((state) => state.language)
   const board = useSettingsStore((state) => state.board)
   const currentHint = useHintStore((state) => state.currentHint)
@@ -36,6 +37,7 @@ function HintsBar() {
         attachment_text: problemCard ? problemAttachmentText : '',
         pseudocode,
         generated_code: generatedCode,
+        active_line: activePseudoLine,
         language,
         board,
         question: trimmedQuestion,

@@ -461,6 +461,7 @@ async function handleAi(request: Request, env: Env, path: string) {
     if (!problem) return json({ hint: 'Please type a problem in first before asking for a hint.', suggest_trace: false, ideal_solution: null, is_correct: false })
     const code = clean(body.pseudocode)
     const generatedCode = clean(body.generated_code)
+    const activeLine = Number(body.active_line) > 0 ? Number(body.active_line) : null
     const attempt = Number(body.attempt_count) || 1
     const question = clean(body.question, 600)
     const history = Array.isArray(body.hint_history)
@@ -482,7 +483,7 @@ async function handleAi(request: Request, env: Env, path: string) {
         : /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
           ? `Check the INPUT lines before line ${arithmeticLine}. Those values may still be text when the calculation runs; trace one example value into the calculation and compare it with the required result.`
           : attempt > 1
-            ? `Trace one concrete example through lines 1–${Math.max(1, code.split('\\n').length)}. Find the first line whose action or value differs from the question, and ask about that line.`
+            ? `Trace one concrete example through lines 1–${Math.max(1, code.split('\n').length)}. Find the first line whose action or value differs from the question, and ask about that line.`
             : `Read the first requirement and compare it with line 1 of your pseudocode. Explain what that line is supposed to do, then check whether its variable and output match the question.`
     if (attempt >= 5) {
       try {
@@ -493,7 +494,7 @@ async function handleAi(request: Request, env: Env, path: string) {
       }
     }
     try {
-      const hint = await geminiText(env, `You are a patient ${board} tutor helping a beginner who may not be a programmer. Reply in simple, friendly English, without jargon and without giving the complete answer. Refer to a specific pseudocode line number whenever possible (for example, "Line 4:"). Give at most four short sentences. If the student asked a follow-up, answer that question directly and make this reply a little deeper than the previous hints. Prioritise runtime correctness, data types, input conversion, calculations, and required output over wording.\nProblem:\n${problem}\nNumbered student pseudocode:\n${numberedCode}\nGenerated program code:\n${generatedCode || '(not available)'}\nStudent follow-up question:\n${question || '(initial hint)'}\nEarlier tutor chat:\n${history || '(none)'}`, 1000)
+      const hint = await geminiText(env, `You are a patient ${board} tutor helping a beginner. The numbered pseudocode below is the student's CURRENT work; inspect it line by line and base the response on what is actually written, not on a generic example. Identify the earliest concrete mismatch, missing requirement, syntax issue, or incorrect value. If an active line is supplied, start by checking that line. Explain the issue in simple English and give one small next step, without writing the complete solution. Answer a follow-up question directly and make later replies deeper. Refer to exact line numbers. Give at most four short sentences.\nProblem and specification:\n${problem}\nNumbered student pseudocode (authoritative current attempt):\n${numberedCode}\nCurrently selected line: ${activeLine ?? '(none)'}\nGenerated program code:\n${generatedCode || '(not available)'}\nStudent follow-up question:\n${question || '(initial hint)'}\nEarlier tutor chat:\n${history || '(none)'}`, 1000)
       return json({ hint, suggest_trace: false, ideal_solution: null, is_correct: false })
     } catch {
       return json({ hint: fallbackHint, suggest_trace: false, ideal_solution: null, is_correct: false, fallback: true })
