@@ -87,18 +87,22 @@ async function geminiText(env: Env, prompt: string, maxTokens = 2000) {
     'gemini-2.0-flash',
     'gemini-1.5-flash',
   ]))
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 },
-      }),
-    },
-  )
-  if (!response.ok) throw new Error(`Gemini request failed (${response.status})`)
+  let response: Response | null = null
+  for (const model of models) {
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 },
+        }),
+      },
+    )
+    if (response.ok) break
+  }
+  if (!response?.ok) throw new Error(`Gemini request failed (${response?.status ?? 'unavailable'})`)
   const result = (await response.json()) as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>
   }
