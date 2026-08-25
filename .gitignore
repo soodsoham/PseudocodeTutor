@@ -1,0 +1,57 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies, virtual environments, and build output
+node_modules/
+**/node_modules/
+venv/
+**/venv/
+dist/
+**/dist/
+build/
+**/build/
+.vite/
+**/.vite/
+
+# Python and JavaScript caches/logs
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Private runtime/user uploads (keep them locally, never publish them)
+backend/data/community_attachments/
+backend/data/community_attachments_index.json
+
+# Local reference/debug artifacts outside the maintained app assets
+/Array-Based Litter Pick Weight Tracking and Ranking System.pdf
+/DeleteButtonSS.png
+/Height.png
+/frontend/DeleteButtonSS.png
+
+# Private product planning and design documents
+/docs/
+
+# Local editor and AI-tool state
+.DS_Store
+**/.DS_Store
+.vscode/
+.idea/
+.claude/
+.agents/
+.codex/
+_bmad/
+_bmad-output/
+
+# OS/editor temporary files
+*.swp
+*.swo
+*~
