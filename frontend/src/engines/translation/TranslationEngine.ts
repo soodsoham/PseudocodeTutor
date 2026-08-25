@@ -721,9 +721,14 @@ function translateConcreteLinePython(
     return [`${indent}${target} = ${value}`]
   }
 
+  match = trimmed.match(/^([A-Za-z_]\w*)\s*=\s*(?!=)(.+)$/)
+  if (match) {
+    return [`${indent}${match[1]} = ${match[2].trim()}`]
+  }
+
   match = trimmed.match(/^OUTPUT\s+(.+)$/i)
   if (match) {
-    return [`${indent}print(${stripElseFromOutput(match[1])})`]
+    return [`${indent}print(${stripElseFromOutput(match[1]).replace(/\s*&\s*/g, ', ')})`]
   }
 
   match = trimmed.match(/^INPUT\s+(.+)$/i)
@@ -828,6 +833,12 @@ function translateConcreteLineJava(
       return [`${indent}${variable} = ${value};`]
     }
     return [`${indent}var ${variable} = ${value};`]
+  }
+
+  match = trimmed.match(/^([A-Za-z_]\w*)\s*=\s*(?!=)(.+)$/)
+  if (match) {
+    const variable = match[1]
+    return [`${indent}${knownVariables.has(variable) ? `${variable} = ${match[2].trim()};` : `var ${variable} = ${match[2].trim()};`}`]
   }
 
   match = trimmed.match(/^OUTPUT\s+(.+)$/i)
@@ -935,6 +946,12 @@ function translateConcreteLineCpp(
       return [`${indent}${variable} = ${value};`]
     }
     return [`${indent}auto ${variable} = ${value};`]
+  }
+
+  match = trimmed.match(/^([A-Za-z_]\w*)\s*=\s*(?!=)(.+)$/)
+  if (match) {
+    const variable = match[1]
+    return [`${indent}${knownVariables.has(variable) ? `${variable} = ${match[2].trim()};` : `auto ${variable} = ${match[2].trim()};`}`]
   }
 
   match = trimmed.match(/^OUTPUT\s+(.+)$/i)
@@ -1046,6 +1063,12 @@ function translateConcreteLineVb(
       return [`${indent}${variable} = ${value}`]
     }
     return [`${indent}Dim ${variable} = ${value}`]
+  }
+
+  match = trimmed.match(/^([A-Za-z_]\w*)\s*=\s*(?!=)(.+)$/)
+  if (match) {
+    const variable = match[1]
+    return [`${indent}${knownVariables.has(variable) ? `${variable} = ${match[2].trim()}` : `Dim ${variable} = ${match[2].trim()}`}`]
   }
 
   match = trimmed.match(/^OUTPUT\s+(.+)$/i)
