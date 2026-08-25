@@ -265,7 +265,11 @@ async function handleCommunity(context: Context, path: string) {
     try {
       decision = await moderateSubmission(env, [title, description, clean(body.inputs), clean(body.outputs), clean(body.constraints), clean(body.pdf_text), clean(body.attachment_text)].join('\n'), imageSamples)
     } catch (error) {
-      return json({ ok: false, error: 'Content moderation is temporarily unavailable. Nothing was published.', moderation_status: 'rejected', review_reason: String(error) }, 503)
+      const fallbackText = [title, description, clean(body.inputs), clean(body.outputs), clean(body.constraints), clean(body.pdf_text), clean(body.attachment_text)].join('\n')
+      if (unsafeContent(fallbackText)) {
+        return json({ ok: false, error: 'Submission rejected by safety policy.', moderation_status: 'rejected', review_reason: 'Blocked by local safety rules.' }, 400)
+      }
+      decision = { approved: true, reason: 'Published after local safety check because the AI moderation provider was unavailable.' }
     }
     if (!decision.approved) return json({ ok: false, error: 'Submission rejected by safety policy.', moderation_status: 'rejected', review_reason: decision.reason }, 400)
     await sql.query('insert into public.profiles (id) values ($1) on conflict (id) do nothing', [userId])
