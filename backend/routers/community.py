@@ -153,6 +153,7 @@ NORMALIZED_HARD_REJECT_TERMS = {
 
 ATTACHMENTS_DIR = Path(__file__).resolve().parents[1] / "data" / "community_attachments"
 ATTACHMENTS_INDEX_PATH = Path(__file__).resolve().parents[1] / "data" / "community_attachments_index.json"
+MAX_PDF_BYTES = 10 * 1024 * 1024
 
 
 def _ensure_attachment_store() -> None:
@@ -273,7 +274,7 @@ async def _review_problem_with_ai(
         return False, hard_reject_reason
 
     if not settings.GEMINI_API_KEY:
-        return True, "AI key not configured. Auto-approved."
+        return False, "AI_UNAVAILABLE: GEMINI_API_KEY is not configured."
 
     image_samples = attachment_image_samples or []
     if image_samples:
@@ -295,6 +296,7 @@ PDF extracted text: {pdf_text}
 
 Reject ONLY when the content is clearly:
 - Inappropriate or abusive
+- Pornographic nudity or sexually explicit content
 - Propaganda/extremist persuasion
 - Provocative/inciting harmful conflict
 - Non-educational spam/unrelated content
@@ -307,16 +309,15 @@ Return ONLY one JSON object in this exact format:
     try:
         text = await _ask_gemini(prompt, max_tokens=220, timeout=18.0)
         return _parse_ai_review_json(text)
-    except Exception:
-        # Favor allowing educational content when AI is unavailable.
-        return True, "AI review unavailable. Defaulting to approved."
+    except Exception as exc:
+        return False, f"AI_UNAVAILABLE: {type(exc).__name__}: moderation could not be completed."
 
 
 async def _review_pdf_images_with_ai(image_samples: List[str]) -> tuple[bool, str]:
     if not image_samples:
         return True, "No PDF images to review."
     if not settings.GEMINI_API_KEY:
-        return True, "PDF page image moderation unavailable. Continuing with text moderation."
+        return False, "AI_UNAVAILABLE: PDF page image moderation is not configured."
 
     parts: List[Dict[str, Any]] = [
         {
@@ -377,12 +378,10 @@ async def _review_pdf_images_with_ai(image_samples: List[str]) -> tuple[bool, st
                     continue
                 return _parse_ai_review_json(text)
 
-            return True, (
-                "PDF page image moderation unavailable. Continuing with text moderation. "
-                + ("; ".join(error_details[:2]) if error_details else "")
-            ).strip()
-    except Exception:
-        return True, "PDF page image moderation unavailable. Continuing with text moderation."
+            detail_text = "; ".join(error_details[:2]) if error_details else "no model response"
+            return False, f"AI_UNAVAILABLE: PDF page image moderation failed. {detail_text}"
+    except Exception as exc:
+        return False, f"AI_UNAVAILABLE: PDF page image moderation failed ({type(exc).__name__})."
 
 
 def _extract_printable_pdf_text(content: bytes, max_chars: int = 12000) -> str:
@@ -412,7 +411,7 @@ async def _review_uploaded_pdf_with_ai(content: bytes, filename: str) -> tuple[b
 
     prompt = (
         "You are a strict moderation gate for a student pseudocode learning platform.\n"
-        "Review this uploaded PDF and reject ONLY if it contains clearly inappropriate, abusive, "
+        "Review this uploaded PDF and reject ONLY if it contains pornographic nudity, sexually explicit, abusive, "
         "propaganda/extremist, provocative/inciting harmful conflict, or non-educational spam content.\n"
         "If the PDF is educational and safe, approve it.\n"
         "Pay close attention to hate/violence slogans such as "
@@ -833,6 +832,8 @@ async def upload_problem_attachment(problem_id: str, req: UploadAttachmentReques
 
         if not content:
             return {"ok": False, "error": "Attachment file is empty."}
+        if len(content) > MAX_PDF_BYTES:
+            return {"ok": False, "error": "PDF must be 10 MB or smaller."}
         if not content.startswith(b"%PDF"):
             return {"ok": False, "error": "Only valid PDF files are supported."}
 
@@ -991,6 +992,14 @@ async def submit_community_problem(req: SubmitCommunityProblemRequest):
             attachment_image_samples=req.attachment_image_samples,
         )
         status = "approved" if approved else "rejected"
+
+        if not approved and review_reason.startswith("AI_UNAVAILABLE:"):
+            return SubmitCommunityProblemResponse(
+                ok=False,
+                error="Content moderation is temporarily unavailable. Nothing was published; please retry in a minute.",
+                moderation_status="rejected",
+                review_reason=review_reason,
+            )
 
         base_payload = {
             "title": req.title.strip(),

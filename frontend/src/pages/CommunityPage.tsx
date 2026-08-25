@@ -79,6 +79,7 @@ const boardOptions = [
 const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase()
 const DAILY_TOTAL_LIMIT = 10
 const DAILY_PDF_LIMIT = 3
+const MAX_PDF_BYTES = 10 * 1024 * 1024
 const PDF_LIMIT_STORAGE_KEY = 'pct_pdf_upload_counts'
 const TOTAL_LIMIT_STORAGE_KEY = 'pct_total_upload_counts'
 const getOrCreateGuestAccountId = () => {
@@ -1834,6 +1835,21 @@ function CommunityPage() {
                     style={{ display: 'none' }}
                     onChange={(event) => {
                       const file = event.target.files?.[0]
+                      if (file && file.size > MAX_PDF_BYTES) {
+                        setSubmitMessage('PDF must be 10 MB or smaller.')
+                        setPdfFilename('')
+                        setSelectedPdfFile(null)
+                        event.currentTarget.value = ''
+                        return
+                      }
+                      if (file && file.type && file.type !== 'application/pdf') {
+                        setSubmitMessage('Only PDF files are supported.')
+                        setPdfFilename('')
+                        setSelectedPdfFile(null)
+                        event.currentTarget.value = ''
+                        return
+                      }
+                      setSubmitMessage(null)
                       setPdfFilename(file?.name ?? '')
                       setSelectedPdfFile(file ?? null)
                     }}

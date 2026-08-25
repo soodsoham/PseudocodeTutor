@@ -17,11 +17,6 @@ type BlockType =
   | 'PROCEDURE'
   | 'FUNCTION'
 
-interface OpenBlock {
-  type: BlockType
-  lineNumber: number
-}
-
 type ConcreteTranslator = (
   trimmed: string,
   indentLevel: number,
@@ -193,24 +188,6 @@ function buildImplicitVbArrayInitLines(sourceLines: string[]) {
   return buildIndexedArrayBaseNames(sourceLines).map(
     (baseName) => `Dim ${baseName}(1000) As String`,
   )
-}
-
-const openingPatterns: Array<{ type: BlockType; pattern: RegExp }> = [
-  { type: 'FOR', pattern: /^FOR\s+\w+\s*(?:←|->)\s*.+\s+TO\s+.+$/i },
-  { type: 'WHILE', pattern: /^WHILE\s+.+\s+DO$/i },
-  { type: 'IF', pattern: /^IF\s+.+\s+THEN$/i },
-  { type: 'REPEAT', pattern: /^REPEAT$/i },
-  { type: 'PROCEDURE', pattern: /^PROCEDURE\s+\w+\s*\(.*\)$/i },
-  { type: 'FUNCTION', pattern: /^FUNCTION\s+\w+\s*\(.*\)$/i },
-]
-
-const closingToOpening: Record<string, BlockType> = {
-  NEXT: 'FOR',
-  ENDWHILE: 'WHILE',
-  ENDIF: 'IF',
-  UNTIL: 'REPEAT',
-  ENDPROCEDURE: 'PROCEDURE',
-  ENDFUNCTION: 'FUNCTION',
 }
 
 const SIMPLE_CLOSER_PATTERNS: Array<{ pattern: RegExp; blockType: BlockType }> = [
@@ -648,46 +625,6 @@ function buildKnownVariables(sourceLines: string[], upToIndex: number): Set<stri
   })
 
   return knownVariables
-}
-
-function getPendingLines(lines: string[]) {
-  const stack: OpenBlock[] = []
-  const pendingLines = new Set<number>()
-
-  lines.forEach((rawLine, index) => {
-    const trimmed = rawLine.trim()
-    const lineNumber = index + 1
-
-    for (const openingPattern of openingPatterns) {
-      if (openingPattern.pattern.test(trimmed)) {
-        stack.push({ type: openingPattern.type, lineNumber })
-        return
-      }
-    }
-
-    for (const [closingKeyword, openingType] of Object.entries(closingToOpening)) {
-      if (!trimmed.toUpperCase().startsWith(closingKeyword)) {
-        continue
-      }
-
-      for (let stackIndex = stack.length - 1; stackIndex >= 0; stackIndex -= 1) {
-        if (stack[stackIndex].type === openingType) {
-          stack.splice(stackIndex, 1)
-          break
-        }
-      }
-
-      return
-    }
-  })
-
-  stack.forEach((openBlock) => {
-    for (let lineNumber = openBlock.lineNumber; lineNumber <= lines.length; lineNumber += 1) {
-      pendingLines.add(lineNumber)
-    }
-  })
-
-  return pendingLines
 }
 
 // ─── Python ───────────────────────────────────────────────────────────────────
@@ -1302,7 +1239,6 @@ function translateBlockLanguage(
   sourceLines: string[],
   config: LangConfig,
 ): TranslationResult {
-  const pendingLines = getPendingLines(sourceLines)
   const translatedLines: TranslatedLine[] = []
   const blockStack: BlockType[] = []
   let indentLevel = 0
@@ -1312,11 +1248,6 @@ function translateBlockLanguage(
     const trimmed = codePart.trim()
     const pseudoLine = index + 1
     const knownVariables = buildKnownVariables(sourceLines, index)
-
-    if (pendingLines.has(pseudoLine)) {
-      translatedLines.push({ pseudoLine, codeLine: '⋯', isPending: true })
-      return
-    }
 
     if (trimmed.length === 0 && commentPart !== null) {
       translatedLines.push({
@@ -1419,7 +1350,7 @@ function translateBlockLanguage(
 
   return {
     lines: translatedLines,
-    hasOpenBlock: pendingLines.size > 0,
+    hasOpenBlock: blockStack.length > 0,
   }
 }
 
