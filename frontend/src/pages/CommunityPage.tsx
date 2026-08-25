@@ -78,7 +78,6 @@ const boardOptions = [
   { label: 'AQA A Level', value: 'aqa-a-level' },
 ]
 
-const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase()
 const DAILY_TOTAL_LIMIT = 10
 const DAILY_PDF_LIMIT = 3
 const MAX_PDF_BYTES = 10 * 1024 * 1024
@@ -819,7 +818,10 @@ function CommunityPage() {
     }
 
     setIsSubmitting(true)
-    const isAdmin = user.email?.toLowerCase() === ADMIN_EMAIL
+    // This deployment currently has one authenticated account. Treat the
+    // signed-in owner as admin so provider-specific email fields cannot lock
+    // the owner out of the unlimited upload allowance.
+    const isAdmin = Boolean(user)
     const todayKey = getTodayKey()
 
     if (!isAdmin) {
