@@ -627,6 +627,24 @@ function buildKnownVariables(sourceLines: string[], upToIndex: number): Set<stri
   return knownVariables
 }
 
+function annotateImplicitNumericInputs(sourceLines: string[]) {
+  return sourceLines.map((line, index) => {
+    const match = line.match(/^(\s*)INPUT\s+(.+)$/i)
+    if (!match) return line
+    const inputSpec = parseInputSpec(match[2])
+    if (inputSpec.declaredType || !isSimpleIdentifier(inputSpec.target)) return line
+    const escaped = inputSpec.target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const laterText = sourceLines.slice(index + 1).join('\n').replace(/"[^"]*"|'[^']*'/g, '')
+    const usedInArithmetic = new RegExp(
+      `(?:\\b${escaped}\\b\\s*(?:[+*/-]|\\b(?:DIV|MOD)\\b)|(?:[+*/-])\\s*\\b${escaped}\\b)`,
+      'i',
+    ).test(laterText)
+    return usedInArithmetic
+      ? `${match[1]}INPUT ${inputSpec.target} AS INTEGER`
+      : line
+  })
+}
+
 // ─── Python ───────────────────────────────────────────────────────────────────
 
 function translateConcreteLinePython(
@@ -1360,7 +1378,7 @@ export function translatePseudocode(
   pseudocode: string,
   language: string,
 ): TranslationResult {
-  const sourceLines = pseudocode.split('\n')
+  const sourceLines = annotateImplicitNumericInputs(pseudocode.split('\n'))
 
   if (language === 'html') {
     return translateToHtml(sourceLines)

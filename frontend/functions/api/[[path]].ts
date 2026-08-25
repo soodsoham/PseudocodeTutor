@@ -395,12 +395,13 @@ async function handleAi(request: Request, env: Env, path: string) {
   if (path === 'hints') {
     if (!problem) return json({ hint: 'Please type a problem in first before asking for a hint.', suggest_trace: false, ideal_solution: null, is_correct: false })
     const code = clean(body.pseudocode)
+    const generatedCode = clean(body.generated_code)
     const attempt = Number(body.attempt_count) || 1
     if (attempt >= 5) {
       const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 2500)
       return json({ hint: null, suggest_trace: true, ideal_solution: ideal, is_correct: false })
     }
-    const hint = await geminiText(env, `You are a ${board} tutor. Give a specific plain-English hint without revealing the full answer. Maximum three sentences.\nProblem: ${problem}\nStudent pseudocode:\n${code || '(nothing written yet)'}`, 800)
+    const hint = await geminiText(env, `You are a ${board} tutor. Give a specific plain-English hint without revealing the full answer. Maximum three sentences. Prioritize runtime correctness, data types, input conversion, calculations, and required output over wording or style. Only mention wording when the algorithm is otherwise correct.\nProblem: ${problem}\nStudent pseudocode:\n${code || '(nothing written yet)'}\nGenerated program code:\n${generatedCode || '(not available)'}`, 800)
     return json({ hint, suggest_trace: false, ideal_solution: null, is_correct: false })
   }
   return json({ error: 'Not found' }, 404)

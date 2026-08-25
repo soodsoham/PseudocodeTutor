@@ -7,6 +7,7 @@ function HintsBar() {
   const problemCard = useEditorStore((state) => state.problemCard)
   const problemAttachmentText = useEditorStore((state) => state.problemAttachmentText)
   const pseudocode = useEditorStore((state) => state.pseudocode)
+  const generatedCode = useEditorStore((state) => state.generatedCode)
   const language = useSettingsStore((state) => state.language)
   const board = useSettingsStore((state) => state.board)
   const currentHint = useHintStore((state) => state.currentHint)
@@ -22,6 +23,7 @@ function HintsBar() {
         problem: problemCard?.description ?? '',
         attachment_text: problemCard ? problemAttachmentText : '',
         pseudocode,
+        generated_code: generatedCode,
         language,
         board,
       })
