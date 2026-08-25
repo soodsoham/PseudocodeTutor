@@ -87,8 +87,7 @@ function HintsBar() {
           style={{
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
-            overflowY: 'auto',
-            overflowX: 'hidden',
+            overflow: 'hidden',
             minWidth: 0,
             minHeight: 0,
             height: '100%',
@@ -98,7 +97,19 @@ function HintsBar() {
             justifyContent: 'flex-end',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '70px' }}>
+          <div
+            className="panel-scroll"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              flex: '1 1 auto',
+              minHeight: 0,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              paddingRight: '6px',
+            }}
+          >
             {messages.length === 0 && currentHint && (
               <div style={{ whiteSpace: 'pre-wrap' }}>{currentHint}</div>
             )}
@@ -127,14 +138,23 @@ function HintsBar() {
               setQuestion('')
               void handleGetHint(nextQuestion)
             }}
-            style={{ display: 'flex', gap: '8px', marginTop: '10px' }}
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginTop: '10px',
+              flex: '0 0 auto',
+              position: 'relative',
+              zIndex: 2,
+              paddingTop: '8px',
+              background: '#43464f',
+            }}
           >
             <input
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder="Ask what you're stuck on…"
               aria-label="Ask for a hint"
-              style={{ flex: 1, minWidth: 0, padding: '8px 10px', font: 'inherit', color: 'inherit', background: 'transparent', border: '1px solid currentColor' }}
+              style={{ flex: 1, minWidth: 0, padding: '8px 10px', font: 'inherit', color: 'inherit', background: '#43464f', border: '1px solid currentColor' }}
             />
             <button type="submit" className="terminal-button" disabled={isLoading} style={{ padding: '7px 12px', whiteSpace: 'nowrap' }}>
               {messages.length === 0 ? '[ Get Hint ]' : '[ Ask ]'}

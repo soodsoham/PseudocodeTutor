@@ -478,6 +478,8 @@ async function handleAi(request: Request, env: Env, path: string) {
       .find((item) => item.length > 12)
     const fallbackHint = !code
       ? `Start with the first requirement in the question: “${(firstRequirement || 'read the required input').slice(0, 180)}”. Write the single OUTPUT or INPUT line that performs that action, then ask again so we can check the next step.`
+      : /\b(array|declare|1d|2d|dimension)\b/i.test(problem) && /^\s*OUTPUT\b/i.test(code)
+        ? `Line 1 starts with OUTPUT, but the question first asks for ${/\b(array|1d|2d|dimension)\b/i.test(problem) ? 'the required array/data setup' : 'a declaration'}. Do not test with “hello world”; replace line 1 with the required declaration or array operation, then we can check its indexes and data type.`
       : /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
         ? `Line ${quotedInputLine}: the value being stored must be an unquoted variable name. Keep quotation marks only around words displayed by OUTPUT, then check the next line against the question.`
         : /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
