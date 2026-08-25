@@ -376,6 +376,18 @@ function CommunityPage() {
   }, [accountKey, activeBoard])
 
   useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void fetchProblems()
+    }
+    window.addEventListener('focus', refreshWhenVisible)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [accountKey, activeBoard])
+
+  useEffect(() => {
     if (!selectedProblem) {
       return
     }

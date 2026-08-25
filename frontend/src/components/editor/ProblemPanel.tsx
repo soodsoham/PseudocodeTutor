@@ -176,6 +176,12 @@ function ProblemPanel() {
   }, [communityProblems, selectedDifficulty])
 
   useEffect(() => {
+    if (mode === 'browse-list') {
+      void fetchCommunityProblems()
+    }
+  }, [mode, board])
+
+  useEffect(() => {
     let cancelled = false
 
     const renderPreview = async () => {
