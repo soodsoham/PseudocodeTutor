@@ -1417,9 +1417,11 @@ function CommunityPage() {
                               Rendering preview...
                             </div>
                           ) : attachmentPreviewError ? (
-                            <div style={{ color: '#ff6b6b', fontSize: '13px' }}>
-                              {attachmentPreviewError}
-                            </div>
+                            <iframe
+                              src={attachmentPdfUrl}
+                              title="Attached PDF preview"
+                              style={{ width: '100%', height: '100%', minHeight: '320px', border: 0, background: '#ffffff' }}
+                            />
                           ) : attachmentPreviewPages.length === 0 ? (
                             <div style={{ color: '#43464f', fontSize: '13px' }}>
                               No preview available.
