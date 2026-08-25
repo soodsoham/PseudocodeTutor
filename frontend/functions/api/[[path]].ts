@@ -457,7 +457,9 @@ async function handleAi(request: Request, env: Env, path: string) {
       : '(nothing written yet)'
     const quotedInputLine = Math.max(1, code.split('\n').findIndex((line) => /INPUT\s+["'][A-Za-z_]\w*["']/i.test(line)) + 1)
     const arithmeticLine = Math.max(1, code.split('\n').findIndex((line) => /[+*/-]/.test(line) && !/^\s*\/\//.test(line)) + 1)
-    const fallbackHint = /\b(name|username|user's name)\b/i.test(question) && !code
+    const fallbackHint = /\b(sum|add|addition|total|plus)\b/i.test(problem) && !code
+      ? 'For this addition problem, start with four simple steps: OUTPUT "Enter the first number", INPUT Num1, OUTPUT "Enter the second number", then INPUT Num2. After that, calculate Sum <- Num1 + Num2 and OUTPUT Sum.'
+      : /\b(name|username|user's name)\b/i.test(question) && !code
       ? 'To ask for someone’s name, write two lines: OUTPUT "What is your name?" followed by INPUT Name. Do not put quotation marks around Name because it is the variable that stores the answer.'
       : /\b(name|username|user's name)\b/i.test(question)
         ? 'Use OUTPUT for the question shown on screen, then INPUT with a variable: OUTPUT "What is your name?" and INPUT Name. The variable Name stores what the person types.'
