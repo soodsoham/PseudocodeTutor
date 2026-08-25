@@ -266,6 +266,7 @@ function CommunityPage() {
   const [reportReason, setReportReason] = useState('')
   const [isReporting, setIsReporting] = useState(false)
   const [myVote, setMyVote] = useState<'up' | 'down' | null>(null)
+  const [isVoting, setIsVoting] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
@@ -613,7 +614,7 @@ function CommunityPage() {
     }
 
     void fetchSolutions()
-  }, [activeBoard, selectedProblem])
+  }, [activeBoard, selectedProblem?.id])
 
   useEffect(() => {
     setExpandedAttachmentPreview(false)
@@ -1111,6 +1112,7 @@ function CommunityPage() {
 
   const handleVote = async (vote: 'up' | 'down') => {
     if (!selectedProblem) return
+    if (isVoting) return
     if (!user) {
       setSubmitMessage('Login required to vote on problems.')
       return
@@ -1127,6 +1129,7 @@ function CommunityPage() {
     setMyVote(nextVote)
     setSelectedProblem(optimistic)
     setProblems((current) => current.map((problem) => String(problem.id) === String(optimistic.id) ? optimistic : problem))
+    setIsVoting(true)
     try {
       const response = await fastapi.post<{ upvotes: number; downvotes: number }>(
         `/community/problems/${encodeURIComponent(String(selectedProblem.id))}/vote`,
@@ -1145,6 +1148,8 @@ function CommunityPage() {
       setSelectedProblem(selectedProblem)
       setProblems((current) => current.map((problem) => String(problem.id) === String(selectedProblem.id) ? selectedProblem : problem))
       setSubmitMessage('Could not record your vote right now.')
+    } finally {
+      setIsVoting(false)
     }
   }
 
@@ -1389,10 +1394,10 @@ function CommunityPage() {
               {selectedProblem.difficulty.toUpperCase()}
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <button type="button" className="terminal-button" onClick={() => void handleVote('up')}>
+              <button type="button" className="terminal-button" disabled={isVoting} onClick={() => void handleVote('up')}>
                 <span style={{ color: myVote === 'up' ? '#7ed957' : undefined }}>[ ▲ {selectedProblem.upvoteCount} ]</span>
               </button>
-              <button type="button" className="terminal-button" onClick={() => void handleVote('down')}>
+              <button type="button" className="terminal-button" disabled={isVoting} onClick={() => void handleVote('down')}>
                 <span style={{ color: myVote === 'down' ? '#ff6b6b' : undefined }}>[ ▼ {selectedProblem.downvoteCount} ]</span>
               </button>
               <button type="button" className="terminal-button" onClick={() => void handleCopyProblemLink()}>
