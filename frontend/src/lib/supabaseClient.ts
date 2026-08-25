@@ -26,7 +26,7 @@ type PasswordActionResult = {
   error?: { message?: string } | null
 }
 
-type BetterAuthPasswordClient = {
+type BetterAuthClient = {
   resetPassword: (input: {
     newPassword: string
     token: string
@@ -36,17 +36,31 @@ type BetterAuthPasswordClient = {
     newPassword: string
     revokeOtherSessions?: boolean
   }) => Promise<PasswordActionResult>
+  getToken: () => Promise<{
+    data?: { token?: string } | null
+    error?: { message?: string } | null
+  }>
 }
 
-const passwordClient = () =>
-  supabase.auth.getBetterAuthInstance() as unknown as BetterAuthPasswordClient
+const betterAuthClient = () =>
+  supabase.auth.getBetterAuthInstance() as unknown as BetterAuthClient
 
 export const resetPasswordWithToken = (token: string, newPassword: string) =>
-  passwordClient().resetPassword({ token, newPassword })
+  betterAuthClient().resetPassword({ token, newPassword })
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
-  passwordClient().changePassword({
+  betterAuthClient().changePassword({
     currentPassword,
     newPassword,
     revokeOtherSessions: true,
   })
+
+// Better Auth session tokens are opaque and cannot be verified with JWKS.
+// Protected Pages Functions require the signed JWT returned by the JWT plugin.
+export const getAuthJwt = async () => {
+  const result = await betterAuthClient().getToken()
+  return {
+    token: result.data?.token ?? null,
+    error: result.error ?? null,
+  }
+}

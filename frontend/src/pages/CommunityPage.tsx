@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
@@ -909,12 +910,35 @@ function CommunityPage() {
           ? response.data.review_reason
           : ''
 
-    } catch {
-      setSubmitMessage(
-        `Could not submit problem. The API is temporarily unavailable at ${
-          import.meta.env.VITE_API_URL || '/api'
-        }.`,
-      )
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        const responseData = error.response.data as
+          | {
+              error?: string
+              moderation_status?: string
+              review_reason?: string
+            }
+          | undefined
+        const detail = responseData?.error || responseData?.review_reason
+
+        if (error.response.status === 401) {
+          setSubmitMessage(
+            'Your login session could not be verified. Sign out, sign in again, and retry.',
+          )
+        } else if (responseData?.moderation_status === 'rejected') {
+          setSubmitMessage(
+            `Problem was not published.${detail ? ` ${detail}` : ''}`,
+          )
+        } else {
+          setSubmitMessage(
+            `Could not submit problem.${detail ? ` ${detail}` : ''}`,
+          )
+        }
+      } else {
+        setSubmitMessage(
+          'Could not submit problem because the network or authentication service did not respond.',
+        )
+      }
       setIsSubmitting(false)
       return
     }
