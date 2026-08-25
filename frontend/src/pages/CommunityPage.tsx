@@ -36,6 +36,7 @@ interface CommunitySolution {
 
 interface AISolutionPayload {
   solution?: string
+  pseudocode?: string
   cached?: boolean
   error?: string
 }
@@ -564,9 +565,10 @@ function CommunityPage() {
               outputs: '',
               constraints: '',
             })
+            const returnedSolution = response.data.solution ?? response.data.pseudocode
             const solutionText =
-              typeof response.data.solution === 'string' && response.data.solution.trim()
-                ? response.data.solution
+              typeof returnedSolution === 'string' && returnedSolution.trim()
+                ? returnedSolution
                 : '// Could not generate solution'
             setAiSolution(solutionText)
           } catch {

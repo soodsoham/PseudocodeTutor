@@ -191,7 +191,8 @@ function ProblemPanel() {
       setRenderedPdfPages([])
 
       try {
-        const fileResponse = await fastapi.get<ArrayBuffer>(problemAttachmentPreviewUrl, {
+        const requestPath = problemAttachmentPreviewUrl.replace(/^\/api(?=\/)/, '')
+        const fileResponse = await fastapi.get<ArrayBuffer>(requestPath, {
           responseType: 'arraybuffer',
         })
         const buffer = toArrayBuffer(fileResponse.data)
@@ -503,9 +504,11 @@ function ProblemPanel() {
                       Rendering preview...
                     </div>
                   ) : pdfPreviewError ? (
-                    <div style={{ color: '#ff6b6b', fontSize: '13px' }}>
-                      {pdfPreviewError}
-                    </div>
+                    <iframe
+                      src={problemAttachmentPreviewUrl}
+                      title="Attached PDF preview"
+                      style={{ width: '100%', height: '100%', minHeight: '220px', border: 0, background: '#ffffff' }}
+                    />
                   ) : renderedPdfPages.length === 0 ? (
                     <div style={{ color: '#43464f', fontSize: '13px' }}>
                       No preview available.
