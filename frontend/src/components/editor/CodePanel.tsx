@@ -44,7 +44,7 @@ function CodePanel() {
       <div className="terminal-label">[ Program Code ]</div>
       <div
         className="panel-scroll panel-content"
-        style={{ marginTop: '24px', overflowX: 'auto', overflowY: 'auto' }}
+        style={{ marginTop: '72px', overflowX: 'auto', overflowY: 'auto' }}
       >
         {codeLines.map((line, index) => {
           const lineNumber = index + 1
