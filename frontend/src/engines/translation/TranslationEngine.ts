@@ -670,7 +670,10 @@ function translateConcreteLinePython(
 ): string[] {
   const indent = getIndent(indentLevel)
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
+  if (match) return [`${indent}${match[1]} = ${match[2].trim()}`]
+
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
     const [, variable, start, end, step = '1'] = match
     return [`${indent}for ${variable} in range(${start.trim()}, ${end.trim()} + (${step.trim()} if (${step.trim()}) > 0 else -1), ${step.trim()}):`]
@@ -795,7 +798,10 @@ function translateConcreteLineJava(
 ): string[] {
   const indent = getIndent(indentLevel)
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
+  if (match) return [`${indent}final var ${match[1]} = ${match[2].trim()};`]
+
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
     const [, variable, start, end, step = '1'] = match
     const increment = step.trim() === '1' ? `${variable}++` : `${variable} += ${step.trim()}`
@@ -913,7 +919,10 @@ function translateConcreteLineCpp(
 ): string[] {
   const indent = getIndent(indentLevel)
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
+  if (match) return [`${indent}const auto ${match[1]} = ${match[2].trim()};`]
+
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
     const [, variable, start, end, step = '1'] = match
     const increment = step.trim() === '1' ? `${variable}++` : `${variable} += ${step.trim()}`
@@ -1032,7 +1041,10 @@ function translateConcreteLineVb(
   const toVbIndexed = (expression: string) =>
     expression.replace(/([A-Za-z_]\w*)\s*\[([^\]]+)\]/g, '$1($2)')
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
+  if (match) return [`${indent}Const ${match[1]} = ${match[2].trim()}`]
+
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
     const [, variable, start, end, step] = match
     if (knownVariables.has(variable)) {
