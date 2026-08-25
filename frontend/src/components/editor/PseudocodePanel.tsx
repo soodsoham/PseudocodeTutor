@@ -84,7 +84,7 @@ function PseudocodePanel() {
         : 'linear-gradient(rgba(255,255,100,0.1), rgba(255,255,100,0.1))',
       backgroundRepeat: 'no-repeat',
       backgroundSize: `100% ${lineHeight}px`,
-      backgroundPosition: `0 ${6 + (activePseudoLine - 1) * lineHeight}px`,
+      backgroundPosition: `0 ${(activePseudoLine - 1) * lineHeight}px`,
     }
   }, [activePseudoLine, theme])
 
@@ -143,21 +143,18 @@ function PseudocodePanel() {
   return (
     <section className="terminal-panel panel" style={{ minHeight: '100%' }}>
       <div className="terminal-label">[ Pseudocode ]</div>
-      <div className="terminal-cursor" style={{ marginTop: '8px', marginBottom: '16px' }}>
-        {'>'}
-      </div>
-      <div style={{ position: 'relative', minHeight: 0, flex: 1 }}>
+      <div style={{ position: 'relative', minHeight: 0, flex: 1, marginTop: '4px' }}>
         <div
           aria-hidden="true"
           style={{
             position: 'absolute',
             zIndex: 1,
             left: 0,
-            top: '6px',
+            top: 0,
             transform: `translateY(-${scrollTop}px)`,
-            width: '52px',
+            width: '48px',
             textAlign: 'right',
-            paddingRight: '4px',
+            paddingRight: '8px',
             color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
             lineHeight: '25.6px',
             fontFamily: 'inherit',
@@ -170,6 +167,7 @@ function PseudocodePanel() {
               key={index + 1}
               style={{
                 height: '25.6px',
+                lineHeight: '25.6px',
                 color: index + 1 === cursorLine
                   ? (theme === 'light' ? '#43464f' : '#ffffff')
                   : undefined,
@@ -286,6 +284,8 @@ function PseudocodePanel() {
           tabSize: 2,
           whiteSpace: 'pre',
           paddingLeft: '56px',
+          paddingTop: 0,
+          paddingBottom: 0,
           overflowX: 'auto',
           overflowY: 'auto',
           ...activeLineBackground,
