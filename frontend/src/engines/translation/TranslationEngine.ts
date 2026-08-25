@@ -703,14 +703,14 @@ function translateConcreteLinePython(
     return [`${indent}if ${condition}: break`]
   }
 
-  match = trimmed.match(/^PROCEDURE\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^PROCEDURE\s+(\w+)(?:\s*\((.*)\))?$/i)
   if (match) {
-    return [`${indent}def ${match[1]}(${match[2].trim()}):`]
+    return [`${indent}def ${match[1]}(${(match[2] ?? '').trim()}):`]
   }
 
-  match = trimmed.match(/^FUNCTION\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^FUNCTION\s+(\w+)(?:\s*\((.*)\))?(?:\s+RETURNS\s+\w+)?$/i)
   if (match) {
-    return [`${indent}def ${match[1]}(${match[2].trim()}):`]
+    return [`${indent}def ${match[1]}(${(match[2] ?? '').trim()}):`]
   }
 
   match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
@@ -831,14 +831,14 @@ function translateConcreteLineJava(
     return [`${indent}} while (!(${translateConditionJava(match[1].trim(), knownVariables)}));`]
   }
 
-  match = trimmed.match(/^PROCEDURE\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^PROCEDURE\s+(\w+)(?:\s*\((.*)\))?$/i)
   if (match) {
-    return [`${indent}public static void ${match[1]}(${match[2].trim()}) {`]
+    return [`${indent}public static void ${match[1]}(${(match[2] ?? '').trim()}) {`]
   }
 
-  match = trimmed.match(/^FUNCTION\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^FUNCTION\s+(\w+)(?:\s*\((.*)\))?(?:\s+RETURNS\s+(\w+))?$/i)
   if (match) {
-    return [`${indent}public static Object ${match[1]}(${match[2].trim()}) {`]
+    return [`${indent}public static ${JAVA_TYPES[(match[3] ?? '').toUpperCase()] ?? 'Object'} ${match[1]}(${(match[2] ?? '').trim()}) {`]
   }
 
   match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
@@ -952,14 +952,14 @@ function translateConcreteLineCpp(
     return [`${indent}} while (!(${translateConditionCpp(match[1].trim(), knownVariables)}));`]
   }
 
-  match = trimmed.match(/^PROCEDURE\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^PROCEDURE\s+(\w+)(?:\s*\((.*)\))?$/i)
   if (match) {
-    return [`${indent}void ${match[1]}(${match[2].trim()}) {`]
+    return [`${indent}void ${match[1]}(${(match[2] ?? '').trim()}) {`]
   }
 
-  match = trimmed.match(/^FUNCTION\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^FUNCTION\s+(\w+)(?:\s*\((.*)\))?(?:\s+RETURNS\s+(\w+))?$/i)
   if (match) {
-    return [`${indent}auto ${match[1]}(${match[2].trim()}) {`]
+    return [`${indent}auto ${match[1]}(${(match[2] ?? '').trim()}) {`]
   }
 
   match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
@@ -1076,14 +1076,14 @@ function translateConcreteLineVb(
     return [`${indent}Loop Until ${translateConditionVb(match[1].trim(), knownVariables)}`]
   }
 
-  match = trimmed.match(/^PROCEDURE\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^PROCEDURE\s+(\w+)(?:\s*\((.*)\))?$/i)
   if (match) {
-    return [`${indent}Sub ${match[1]}(${match[2].trim()})`]
+    return [`${indent}Sub ${match[1]}(${(match[2] ?? '').trim()})`]
   }
 
-  match = trimmed.match(/^FUNCTION\s+(\w+)\s*\((.*)\)$/i)
+  match = trimmed.match(/^FUNCTION\s+(\w+)(?:\s*\((.*)\))?(?:\s+RETURNS\s+\w+)?$/i)
   if (match) {
-    return [`${indent}Function ${match[1]}(${match[2].trim()})`]
+    return [`${indent}Function ${match[1]}(${(match[2] ?? '').trim()})`]
   }
 
   match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
