@@ -16,6 +16,7 @@ type BlockType =
   | 'REPEAT'
   | 'PROCEDURE'
   | 'FUNCTION'
+  | 'CASE'
 
 type ConcreteTranslator = (
   trimmed: string,
@@ -28,6 +29,10 @@ interface LangConfig {
   simpleCloserLine: (blockType: BlockType, trimmed: string, indent: number) => string | null
   trailingElseLine: (indent: number) => string
   commentLine: (commentText: string, indent: number) => string
+  caseStartLine: (expression: string, indent: number) => string
+  caseClauseLine: (value: string, statement: string, indent: number) => string
+  caseOtherwiseLine: (statement: string, indent: number) => string
+  caseEndLine: (indent: number) => string
 }
 
 interface InputSpec {
@@ -210,6 +215,7 @@ const SIMPLE_CLOSER_PATTERNS: Array<{ pattern: RegExp; blockType: BlockType }> =
   { pattern: /^ENDWHILE\b/i, blockType: 'WHILE' },
   { pattern: /^ENDPROCEDURE\b/i, blockType: 'PROCEDURE' },
   { pattern: /^ENDFUNCTION\b/i, blockType: 'FUNCTION' },
+  { pattern: /^ENDCASE\b/i, blockType: 'CASE' },
   { pattern: /^NEXT\b/i, blockType: 'FOR' },
 ]
 
@@ -1276,6 +1282,10 @@ function getPythonConfig(): LangConfig {
     simpleCloserLine: () => null,
     trailingElseLine: (indent) => `${getIndent(indent)}else:`,
     commentLine: (commentText, indent) => `${getIndent(indent)}# ${commentText}`,
+    caseStartLine: (expression, indent) => `${getIndent(indent)}__case_value = ${expression}`,
+    caseClauseLine: (value, statement, indent) => `${getIndent(indent)}if __case_value == ${value}: ${statement.trim()}`,
+    caseOtherwiseLine: (statement, indent) => `${getIndent(indent)}else: ${statement.trim()}`,
+    caseEndLine: () => '',
   }
 }
 
@@ -1285,6 +1295,10 @@ function getJavaConfig(): LangConfig {
     simpleCloserLine: (_blockType, _trimmed, indent) => `${getIndent(indent)}}`,
     trailingElseLine: (indent) => `${getIndent(indent)}} else {`,
     commentLine: (commentText, indent) => `${getIndent(indent)}// ${commentText}`,
+    caseStartLine: (expression, indent) => `${getIndent(indent)}switch (${expression}) {`,
+    caseClauseLine: (value, statement, indent) => `${getIndent(indent)}case ${value}: ${statement.trim()} break;`,
+    caseOtherwiseLine: (statement, indent) => `${getIndent(indent)}default: ${statement.trim()} break;`,
+    caseEndLine: (indent) => `${getIndent(indent)}}`,
   }
 }
 
@@ -1294,6 +1308,10 @@ function getCppConfig(): LangConfig {
     simpleCloserLine: (_blockType, _trimmed, indent) => `${getIndent(indent)}}`,
     trailingElseLine: (indent) => `${getIndent(indent)}} else {`,
     commentLine: (commentText, indent) => `${getIndent(indent)}// ${commentText}`,
+    caseStartLine: (expression, indent) => `${getIndent(indent)}switch (${expression}) {`,
+    caseClauseLine: (value, statement, indent) => `${getIndent(indent)}case ${value}: ${statement.trim()} break;`,
+    caseOtherwiseLine: (statement, indent) => `${getIndent(indent)}default: ${statement.trim()} break;`,
+    caseEndLine: (indent) => `${getIndent(indent)}}`,
   }
 }
 
@@ -1317,6 +1335,10 @@ function getVbConfig(): LangConfig {
     },
     trailingElseLine: (indent) => `${getIndent(indent)}Else`,
     commentLine: (commentText, indent) => `${getIndent(indent)}' ${commentText}`,
+    caseStartLine: (expression, indent) => `${getIndent(indent)}Select Case ${expression}`,
+    caseClauseLine: (value, statement, indent) => `${getIndent(indent)}Case ${value}: ${statement.trim()}`,
+    caseOtherwiseLine: (statement, indent) => `${getIndent(indent)}Case Else: ${statement.trim()}`,
+    caseEndLine: (indent) => `${getIndent(indent)}End Select`,
   }
 }
 
@@ -1336,10 +1358,52 @@ function translateBlockLanguage(
     const pseudoLine = index + 1
     const knownVariables = buildKnownVariables(sourceLines, index)
 
+    if (blockStack[blockStack.length - 1] === 'CASE') {
+      const otherwiseMatch = trimmed.match(/^OTHERWISE\s*:?(.*)$/i)
+      const clauseMatch = trimmed.match(/^(.+?)\s*:\s*(.+)$/)
+      if (otherwiseMatch || clauseMatch) {
+        const value = otherwiseMatch ? '' : clauseMatch?.[1]?.trim() ?? ''
+        const statement = otherwiseMatch ? otherwiseMatch[1].trim() : clauseMatch?.[2]?.trim() ?? ''
+        const translatedStatement = config.translateLine(statement, indentLevel, knownVariables)
+          .filter((line) => line.trim().length > 0)
+          .map((line) => line.trim())
+          .join(' ')
+        translatedLines.push({
+          pseudoLine,
+          codeLine: otherwiseMatch
+            ? config.caseOtherwiseLine(translatedStatement, indentLevel)
+            : config.caseClauseLine(value, translatedStatement, indentLevel),
+          isPending: false,
+        })
+        return
+      }
+    }
+
     if (trimmed.length === 0 && commentPart !== null) {
       translatedLines.push({
         pseudoLine,
         codeLine: config.commentLine(commentPart, indentLevel),
+        isPending: false,
+      })
+      return
+    }
+
+    const caseStart = trimmed.match(/^CASE\s+OF\s+(.+)$/i)
+    if (caseStart) {
+      blockStack.push('CASE')
+      translatedLines.push({
+        pseudoLine,
+        codeLine: config.caseStartLine(caseStart[1].trim(), indentLevel),
+        isPending: false,
+      })
+      return
+    }
+
+    if (/^ENDCASE$/i.test(trimmed)) {
+      if (blockStack[blockStack.length - 1] === 'CASE') blockStack.pop()
+      translatedLines.push({
+        pseudoLine,
+        codeLine: config.caseEndLine(indentLevel),
         isPending: false,
       })
       return

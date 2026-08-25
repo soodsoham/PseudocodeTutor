@@ -249,7 +249,9 @@ async function listProblems(request: Request, env: Env) {
   const rows = await sql.query(
     `select id,title,description,difficulty,board,inputs,outputs,constraints,created_at
      from public.community_problems
-     where is_public=true and status='approved' and moderation_status='approved'
+     where is_public=true
+       and coalesce(lower(status),'approved') <> 'rejected'
+       and coalesce(lower(moderation_status),'approved') <> 'rejected'
        and ($1='' or regexp_replace(lower(board),'[^a-z0-9]','','g')=regexp_replace(lower($1),'[^a-z0-9]','','g'))
        and ($2='' or lower(difficulty)=lower($2))
        and ($3='' or title ilike '%' || $3 || '%')
