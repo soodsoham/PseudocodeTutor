@@ -132,7 +132,7 @@ function buildImplicitPythonArrayInitLines(sourceLines: string[]) {
     const trimmed = line.trim()
     extractIndexedBaseNames(trimmed).forEach((baseName) => readArrays.add(baseName))
 
-    const assignmentMatch = trimmed.match(/^(.+?)\s*(?:←|->)\s*.+$/)
+    const assignmentMatch = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*.+$/)
     if (assignmentMatch) {
       const lhsBaseNames = extractIndexedBaseNames(assignmentMatch[1])
       lhsBaseNames.forEach((baseName) => writtenArrays.add(baseName))
@@ -615,7 +615,7 @@ function buildKnownVariables(sourceLines: string[], upToIndex: number): Set<stri
       knownVariables.add(match[1])
     }
 
-    match = previousTrimmed.match(/^(?!FOR\b)(.+?)\s*(?:←|->)\s*.+$/i)
+    match = previousTrimmed.match(/^(?!FOR\b)(.+?)\s*(?:←|<-|->)\s*.+$/i)
     if (match) {
       const baseName = extractBaseIdentifier(match[1])
       if (baseName) {
@@ -636,7 +636,7 @@ function translateConcreteLinePython(
 ): string[] {
   const indent = getIndent(indentLevel)
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|->)\s*(.+)\s+TO\s+(.+)$/i)
+  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+)$/i)
   if (match) {
     const [, variable, start, end] = match
     return [`${indent}for ${variable} in range(${start.trim()}, ${end.trim()} + 1):`]
@@ -676,7 +676,7 @@ function translateConcreteLinePython(
     return [`${indent}def ${match[1]}(${match[2].trim()}):`]
   }
 
-  match = trimmed.match(/^(.+?)\s*(?:←|->)\s*(.+)$/)
+  match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
   if (match) {
     const target = match[1].trim()
     const value = match[2].trim()
@@ -752,7 +752,7 @@ function translateConcreteLineJava(
 ): string[] {
   const indent = getIndent(indentLevel)
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|->)\s*(.+)\s+TO\s+(.+)$/i)
+  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+)$/i)
   if (match) {
     const [, variable, start, end] = match
     return [`${indent}for (int ${variable} = ${start.trim()}; ${variable} <= ${end.trim()}; ${variable}++) {`]
@@ -791,7 +791,7 @@ function translateConcreteLineJava(
     return [`${indent}public static Object ${match[1]}(${match[2].trim()}) {`]
   }
 
-  match = trimmed.match(/^(.+?)\s*(?:←|->)\s*(.+)$/)
+  match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
   if (match) {
     const variable = match[1].trim()
     const value = match[2].trim()
@@ -859,7 +859,7 @@ function translateConcreteLineCpp(
 ): string[] {
   const indent = getIndent(indentLevel)
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|->)\s*(.+)\s+TO\s+(.+)$/i)
+  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+)$/i)
   if (match) {
     const [, variable, start, end] = match
     return [`${indent}for (int ${variable} = ${start.trim()}; ${variable} <= ${end.trim()}; ${variable}++) {`]
@@ -898,7 +898,7 @@ function translateConcreteLineCpp(
     return [`${indent}auto ${match[1]}(${match[2].trim()}) {`]
   }
 
-  match = trimmed.match(/^(.+?)\s*(?:←|->)\s*(.+)$/)
+  match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
   if (match) {
     const variable = match[1].trim()
     const value = match[2].trim()
@@ -967,7 +967,7 @@ function translateConcreteLineVb(
   const toVbIndexed = (expression: string) =>
     expression.replace(/([A-Za-z_]\w*)\s*\[([^\]]+)\]/g, '$1($2)')
 
-  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|->)\s*(.+)\s+TO\s+(.+)$/i)
+  let match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+)$/i)
   if (match) {
     const [, variable, start, end] = match
     if (knownVariables.has(variable)) {
@@ -1009,7 +1009,7 @@ function translateConcreteLineVb(
     return [`${indent}Function ${match[1]}(${match[2].trim()})`]
   }
 
-  match = trimmed.match(/^(.+?)\s*(?:←|->)\s*(.+)$/)
+  match = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*(.+)$/)
   if (match) {
     const variable = toVbIndexed(match[1].trim())
     const value = toVbIndexed(match[2].trim())
@@ -1327,7 +1327,7 @@ function translateBlockLanguage(
     }
 
     // Block openers — push stack and increase indent after emitting the opening line
-    if (/^FOR\s+\w+\s*(?:←|->)\s*.+\s+TO\s+.+$/i.test(trimmed)) {
+    if (/^FOR\s+\w+\s*(?:←|<-|->)\s*.+\s+TO\s+.+$/i.test(trimmed)) {
       blockStack.push('FOR')
       indentLevel += 1
     } else if (/^WHILE\s+.+\s+DO$/i.test(trimmed)) {
