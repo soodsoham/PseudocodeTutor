@@ -62,14 +62,26 @@ function CodePanel() {
             userSelect: 'none',
           }}
         >
-          {codeLines.map((_, index) => (
-            <div key={index + 1} style={{ height: '25.6px', lineHeight: '25.6px' }}>{index + 1}</div>
-          ))}
+          {codeLines.map((_, index) => {
+            const highlighted = highlightedCodeLines.has(index + 1)
+            return (
+              <div
+                key={index + 1}
+                style={{
+                  height: '25.6px',
+                  lineHeight: '25.6px',
+                  background: highlighted ? (theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,100,0.1)') : 'transparent',
+                }}
+              >
+                {index + 1}
+              </div>
+            )
+          })}
         </div>
         <div
           className="panel-scroll panel-content"
           onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-          style={{ overflowX: 'auto', overflowY: 'auto', paddingLeft: '44px' }}
+          style={{ overflowX: 'auto', overflowY: 'auto', paddingLeft: '40px' }}
         >
         {codeLines.map((line, index) => {
           const lineNumber = index + 1

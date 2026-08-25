@@ -332,9 +332,6 @@ function ProblemPanel() {
       style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
     >
       <div className="terminal-label">[ Problem ]</div>
-      <div className="terminal-cursor" style={{ marginTop: '8px', marginBottom: '16px' }}>
-        {'>'}
-      </div>
 
       {mode === 'default' && (
         <div className="problem-empty">
