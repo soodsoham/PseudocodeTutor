@@ -28,7 +28,8 @@ body,
 
 body {
   color: #ffffff;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -440,13 +441,13 @@ input::placeholder {
 }
 
 .editor-shell {
-  flex: 1;
+  flex: none;
+  min-height: calc(100vh - 70px);
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .editor-grid {

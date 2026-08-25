@@ -84,7 +84,7 @@ function PseudocodePanel() {
         : 'linear-gradient(rgba(255,255,100,0.1), rgba(255,255,100,0.1))',
       backgroundRepeat: 'no-repeat',
       backgroundSize: `100% ${lineHeight}px`,
-      backgroundPosition: `0 ${(activePseudoLine - 1) * lineHeight}px`,
+      backgroundPosition: `0 ${6 + (activePseudoLine - 1) * lineHeight}px`,
     }
   }, [activePseudoLine, theme])
 
@@ -159,7 +159,7 @@ function PseudocodePanel() {
             textAlign: 'right',
             paddingRight: '4px',
             color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
-            lineHeight: '1.6',
+            lineHeight: '25.6px',
             fontFamily: 'inherit',
             pointerEvents: 'none',
             userSelect: 'none',
