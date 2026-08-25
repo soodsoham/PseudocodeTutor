@@ -640,7 +640,8 @@ function buildKnownVariables(sourceLines: string[], upToIndex: number): Set<stri
 
 function annotateImplicitNumericInputs(sourceLines: string[]) {
   return sourceLines.map((line, index) => {
-    const match = line.match(/^(\s*)INPUT\s+(.+)$/i)
+    const codePart = splitInlineComment(line).codePart
+    const match = codePart.match(/^(\s*)INPUT\s+(.+)$/i)
     if (!match) return line
     const inputSpec = parseInputSpec(match[2])
     if (inputSpec.declaredType || !isSimpleIdentifier(inputSpec.target)) return line
@@ -651,7 +652,7 @@ function annotateImplicitNumericInputs(sourceLines: string[]) {
       'i',
     ).test(laterText)
     return usedInArithmetic
-      ? `${match[1]}INPUT ${inputSpec.target} AS INTEGER`
+      ? `${match[1]}INPUT ${inputSpec.target} AS INTEGER${line.slice(codePart.length)}`
       : line
   })
 }
