@@ -40,6 +40,9 @@ backend/data/community_attachments_index.json
 # Private product planning and design documents
 /docs/
 
+# Private one-time migration exports and credentials
+/private-migration/
+
 # Local editor and AI-tool state
 .DS_Store
 **/.DS_Store
@@ -55,3 +58,5 @@ _bmad-output/
 *.swp
 *.swo
 *~
+/.neon
+/.neon/

@@ -1,4 +1,4 @@
-import type { User } from '@supabase/supabase-js'
+import type { AuthUser as User } from '../types/auth'
 import { saveProject } from './projects'
 
 export async function migrateGuestDataToSupabase(user: User) {

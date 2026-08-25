@@ -91,6 +91,27 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setSuccessMessage('Check your email to confirm your account')
   }
 
+  const handleForgotPassword = async () => {
+    resetMessages()
+    if (!email.trim()) {
+      setErrorMessage('Enter your email address first.')
+      return
+    }
+
+    setIsSubmitting(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    })
+    setIsSubmitting(false)
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
+
+    setSuccessMessage('Password reset email sent. Check your inbox.')
+  }
+
   return (
     <div
       className="modal-overlay"
@@ -205,16 +226,28 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
           )}
 
           {activeTab === 'login' ? (
-            <button
-              type="button"
-              className="terminal-button signin-btn"
-              onClick={() => {
-                void handleSignIn()
-              }}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? '[ Signing In... ]' : '[ Sign In ]'}
-            </button>
+            <>
+              <button
+                type="button"
+                className="terminal-button signin-btn"
+                onClick={() => {
+                  void handleSignIn()
+                }}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? '[ Signing In... ]' : '[ Sign In ]'}
+              </button>
+              <button
+                type="button"
+                className="terminal-button"
+                onClick={() => {
+                  void handleForgotPassword()
+                }}
+                disabled={isSubmitting}
+              >
+                [ Forgot password? ]
+              </button>
+            </>
           ) : (
             <button
               type="button"

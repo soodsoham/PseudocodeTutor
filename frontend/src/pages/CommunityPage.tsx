@@ -911,8 +911,8 @@ function CommunityPage() {
 
     } catch {
       setSubmitMessage(
-        `Could not submit problem. Backend not reachable. Start API server at ${
-          import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+        `Could not submit problem. The API is temporarily unavailable at ${
+          import.meta.env.VITE_API_URL || '/api'
         }.`,
       )
       setIsSubmitting(false)

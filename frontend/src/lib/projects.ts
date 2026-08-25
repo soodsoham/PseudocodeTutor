@@ -1,6 +1,6 @@
 import { supabase } from '../api/supabase'
 import { fastapi } from '../api/fastapi'
-import type { User } from '@supabase/supabase-js'
+import type { AuthUser as User } from '../types/auth'
 
 export const PROJECTS_STORAGE_KEY = 'pseudo_wizard_projects'
 
