@@ -58,9 +58,18 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
 // Better Auth session tokens are opaque and cannot be verified with JWKS.
 // Protected Pages Functions require the signed JWT returned by the JWT plugin.
 export const getAuthJwt = async () => {
-  const result = await betterAuthClient().getToken()
-  return {
-    token: result.data?.token ?? null,
-    error: result.error ?? null,
+  try {
+    const result = await betterAuthClient().getToken()
+    return {
+      token: result.data?.token ?? null,
+      error: result.error ?? null,
+    }
+  } catch (error) {
+    return {
+      token: null,
+      error: {
+        message: error instanceof Error ? error.message : 'JWT exchange failed.',
+      },
+    }
   }
 }
