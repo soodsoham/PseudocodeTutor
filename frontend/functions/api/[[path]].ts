@@ -404,10 +404,12 @@ async function handleAi(request: Request, env: Env, path: string) {
     const numberedCode = code
       ? code.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n')
       : '(nothing written yet)'
+    const quotedInputLine = Math.max(1, code.split('\n').findIndex((line) => /INPUT\s+["'][A-Za-z_]\w*["']/i.test(line)) + 1)
+    const arithmeticLine = Math.max(1, code.split('\n').findIndex((line) => /[+*/-]/.test(line) && !/^\s*\/\//.test(line)) + 1)
     const fallbackHint = /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
-      ? 'Line 1 (or the INPUT line): use an unquoted variable name, such as INPUT Num1. Quotation marks are for words displayed by OUTPUT, not for the place where a number is stored.'
+      ? `Line ${quotedInputLine}: use an unquoted variable name, such as INPUT Num1. Quotation marks are for words displayed by OUTPUT, not for the place where a number is stored.`
       : /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
-        ? 'Look at the INPUT lines first. The values arrive as text, so convert them to numbers before doing arithmetic. Then check the line that calculates the total.'
+        ? `Check the INPUT lines before line ${arithmeticLine}. The values arrive as text, so convert them to numbers before doing arithmetic. Then check the line that calculates the total.`
         : attempt > 1
           ? `Look at the first line where your result differs from the expected result. Trace one example value through that line, then ask me about that line if it is still unclear.`
           : 'Trace each INPUT, calculation, and OUTPUT with a small example. Find the first line where your result differs from what the question asks.'
