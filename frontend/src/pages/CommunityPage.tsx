@@ -1482,11 +1482,16 @@ function CommunityPage() {
                 </div>
                 {expandedAiSolution && (
                   <pre
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
                     style={{
                       margin: '10px 0 0',
                       whiteSpace: 'pre-wrap',
                       color: '#ffffff',
                       fontSize: '13px',
+                      userSelect: 'text',
+                      WebkitUserSelect: 'text',
+                      cursor: 'text',
                     }}
                   >
                     {isLoadingAiSolution ? 'Loading AI solution...' : (aiSolution ?? '// Could not generate solution')}
