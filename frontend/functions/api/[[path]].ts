@@ -114,7 +114,7 @@ async function geminiText(env: Env, prompt: string, maxTokens = 2000) {
         .filter((item) => item.supportedGenerationMethods?.includes('generateContent') && typeof item.name === 'string')
         .map((item) => String(item.name).replace(/^models\//, ''))
         .filter((name) => /flash/i.test(name))
-      for (const model of available) {
+      for (const model of available.slice(0, 1)) {
         response = await fetch(`https://generativelanguage.googleapis.com/${version}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
