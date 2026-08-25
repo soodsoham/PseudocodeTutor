@@ -535,6 +535,7 @@ function CommunityPage() {
         // The first successful request generates and stores the answer in Neon;
         // later requests only read that saved answer.
         try {
+          const attachmentContext = await fetchCommunityProblemPdfContext(selectedProblem.id)
           const response = await fastapi.post<AISolutionPayload>('/community/ai-solution', {
             problem_id: problemIdStr,
             title: selectedProblem.title,
@@ -543,6 +544,7 @@ function CommunityPage() {
             inputs: '',
             outputs: '',
             constraints: '',
+            pdf_text: attachmentContext.text,
           })
           const returnedSolution = response.data.solution ?? response.data.pseudocode
           const solutionText =
