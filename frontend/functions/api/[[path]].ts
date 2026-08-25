@@ -466,6 +466,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   } catch (error) {
     if (error instanceof Response) return error
     console.error('API error', error instanceof Error ? error.message : 'unknown')
-    return json({ error: 'The API could not complete this request.' }, 500)
+    return json({ error: 'The API could not complete this request.', detail: error instanceof Error ? error.message : 'unknown' }, 500)
   }
 }
