@@ -250,7 +250,7 @@ async function listProblems(request: Request, env: Env) {
     `select id,title,description,difficulty,board,inputs,outputs,constraints,created_at
      from public.community_problems
      where is_public=true and status='approved' and moderation_status='approved'
-       and ($1='' or lower(board)=lower($1))
+       and ($1='' or regexp_replace(lower(board),'[^a-z0-9]','','g')=regexp_replace(lower($1),'[^a-z0-9]','','g'))
        and ($2='' or lower(difficulty)=lower($2))
        and ($3='' or title ilike '%' || $3 || '%')
      order by created_at desc limit $4 offset $5`,
@@ -455,13 +455,19 @@ async function handleAi(request: Request, env: Env, path: string) {
       : '(nothing written yet)'
     const quotedInputLine = Math.max(1, code.split('\n').findIndex((line) => /INPUT\s+["'][A-Za-z_]\w*["']/i.test(line)) + 1)
     const arithmeticLine = Math.max(1, code.split('\n').findIndex((line) => /[+*/-]/.test(line) && !/^\s*\/\//.test(line)) + 1)
-    const fallbackHint = /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
+    const fallbackHint = /\b(name|username|user's name)\b/i.test(question) && !code
+      ? 'To ask for someone’s name, write two lines: OUTPUT "What is your name?" followed by INPUT Name. Do not put quotation marks around Name because it is the variable that stores the answer.'
+      : /\b(name|username|user's name)\b/i.test(question)
+        ? 'Use OUTPUT for the question shown on screen, then INPUT with a variable: OUTPUT "What is your name?" and INPUT Name. The variable Name stores what the person types.'
+        : !code
+          ? 'Start by writing the first action the problem asks for. For example, use OUTPUT "What is your name?" to display a question, then INPUT Name to store the reply.'
+          : /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
       ? `Line ${quotedInputLine}: use an unquoted variable name, such as INPUT Num1. Quotation marks are for words displayed by OUTPUT, not for the place where a number is stored.`
       : /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
         ? `Check the INPUT lines before line ${arithmeticLine}. The values arrive as text, so convert them to numbers before doing arithmetic. Then check the line that calculates the total.`
         : attempt > 1
-          ? `Look at the first line where your result differs from the expected result. Trace one example value through that line, then ask me about that line if it is still unclear.`
-          : 'Trace each INPUT, calculation, and OUTPUT with a small example. Find the first line where your result differs from what the question asks.'
+          ? `Try this concrete check: choose a small example input, write down what line 1 should do, then compare it with your next line. Tell me the exact line and value that confused you.`
+          : 'Use a small example and check one instruction at a time. For an input question, your first steps are usually OUTPUT a clear question, then INPUT a variable to store the reply.'
     if (attempt >= 5) {
       try {
         const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 2500)
