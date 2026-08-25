@@ -155,7 +155,7 @@ function HintsBar() {
               onChange={(event) => setQuestion(event.target.value)}
               placeholder="Ask what you're stuck on…"
               aria-label="Ask for a hint"
-              style={{ flex: 1, minWidth: 0, padding: '8px 10px', font: 'inherit', color: 'inherit', background: '#43464f', border: '1px solid currentColor' }}
+              style={{ flex: 1, minWidth: 0, height: '44px', boxSizing: 'border-box', padding: '8px 10px', font: 'inherit', color: 'inherit', background: '#43464f', border: '2px solid #ababb6', borderRadius: '4px' }}
             />
             <button type="submit" className="terminal-button" disabled={isLoading} style={{ padding: '7px 12px', whiteSpace: 'nowrap' }}>
               {messages.length === 0 ? '[ Get Hint ]' : '[ Ask ]'}

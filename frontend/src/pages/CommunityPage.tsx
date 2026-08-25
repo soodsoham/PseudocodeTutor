@@ -265,6 +265,7 @@ function CommunityPage() {
   const [submitMessage, setSubmitMessage] = useState<string | null>(null)
   const [reportReason, setReportReason] = useState('')
   const [isReporting, setIsReporting] = useState(false)
+  const [myVote, setMyVote] = useState<'up' | 'down' | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
@@ -438,6 +439,7 @@ function CommunityPage() {
       setPendingDeleteSolutionId(null)
       setAiSolution(null)
       setSolutions([])
+      setMyVote(null)
 
       const userSolutionsPromise = (async () => {
         const fetchQueueSolutions = async () => {
@@ -1113,19 +1115,35 @@ function CommunityPage() {
       setSubmitMessage('Login required to vote on problems.')
       return
     }
+    const previousVote = myVote
+    const nextVote = previousVote === vote ? null : vote
+    const upvoteDelta = nextVote === 'up' ? 1 : previousVote === 'up' ? -1 : 0
+    const downvoteDelta = nextVote === 'down' ? 1 : previousVote === 'down' ? -1 : 0
+    const optimistic = {
+      ...selectedProblem,
+      upvoteCount: Math.max(0, selectedProblem.upvoteCount + upvoteDelta),
+      downvoteCount: Math.max(0, selectedProblem.downvoteCount + downvoteDelta),
+    }
+    setMyVote(nextVote)
+    setSelectedProblem(optimistic)
+    setProblems((current) => current.map((problem) => String(problem.id) === String(optimistic.id) ? optimistic : problem))
     try {
       const response = await fastapi.post<{ upvotes: number; downvotes: number }>(
         `/community/problems/${encodeURIComponent(String(selectedProblem.id))}/vote`,
         { vote },
       )
       const next = {
-        ...selectedProblem,
+        ...optimistic,
         upvoteCount: Number(response.data.upvotes) || 0,
         downvoteCount: Number(response.data.downvotes) || 0,
       }
+      setMyVote(nextVote)
       setSelectedProblem(next)
       setProblems((current) => current.map((problem) => String(problem.id) === String(next.id) ? next : problem))
     } catch {
+      setMyVote(previousVote)
+      setSelectedProblem(selectedProblem)
+      setProblems((current) => current.map((problem) => String(problem.id) === String(selectedProblem.id) ? selectedProblem : problem))
       setSubmitMessage('Could not record your vote right now.')
     }
   }
@@ -1372,10 +1390,10 @@ function CommunityPage() {
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               <button type="button" className="terminal-button" onClick={() => void handleVote('up')}>
-                [ ▲ {selectedProblem.upvoteCount} ]
+                <span style={{ color: myVote === 'up' ? '#7ed957' : undefined }}>[ ▲ {selectedProblem.upvoteCount} ]</span>
               </button>
               <button type="button" className="terminal-button" onClick={() => void handleVote('down')}>
-                [ ▼ {selectedProblem.downvoteCount} ]
+                <span style={{ color: myVote === 'down' ? '#ff6b6b' : undefined }}>[ ▼ {selectedProblem.downvoteCount} ]</span>
               </button>
               <button type="button" className="terminal-button" onClick={() => void handleCopyProblemLink()}>
                 [ Copy Link ]
@@ -1387,9 +1405,9 @@ function CommunityPage() {
                 onChange={(event) => setReportReason(event.target.value)}
                 placeholder="Report reason..."
                 aria-label="Report reason"
-                style={{ flex: '1 1 260px', minWidth: 0, padding: '8px 10px', font: 'inherit', color: '#ffffff', background: '#43464f', border: '1px solid currentColor' }}
+                style={{ flex: '1 1 260px', minWidth: 0, height: '44px', boxSizing: 'border-box', padding: '8px 10px', font: 'inherit', color: '#ffffff', background: '#43464f', border: '2px solid #ababb6', borderRadius: '4px' }}
               />
-              <button type="button" className="terminal-button" disabled={isReporting || !reportReason.trim()} onClick={() => void handleReport()}>
+              <button type="button" className="terminal-button" disabled={isReporting || !reportReason.trim()} style={{ height: '44px', boxSizing: 'border-box' }} onClick={() => void handleReport()}>
                 {isReporting ? '[ Reporting... ]' : '[ Report ]'}
               </button>
             </div>
