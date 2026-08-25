@@ -401,8 +401,18 @@ async function handleAi(request: Request, env: Env, path: string) {
       const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 2500)
       return json({ hint: null, suggest_trace: true, ideal_solution: ideal, is_correct: false })
     }
-    const hint = await geminiText(env, `You are a ${board} tutor. Give a specific plain-English hint without revealing the full answer. Maximum three sentences. Prioritize runtime correctness, data types, input conversion, calculations, and required output over wording or style. Only mention wording when the algorithm is otherwise correct.\nProblem: ${problem}\nStudent pseudocode:\n${code || '(nothing written yet)'}\nGenerated program code:\n${generatedCode || '(not available)'}`, 800)
-    return json({ hint, suggest_trace: false, ideal_solution: null, is_correct: false })
+    try {
+      const hint = await geminiText(env, `You are a ${board} tutor. Give a specific plain-English hint without revealing the full answer. Maximum three sentences. Prioritize runtime correctness, data types, input conversion, calculations, and required output over wording or style. Only mention wording when the algorithm is otherwise correct.\nProblem: ${problem}\nStudent pseudocode:\n${code || '(nothing written yet)'}\nGenerated program code:\n${generatedCode || '(not available)'}`, 800)
+      return json({ hint, suggest_trace: false, ideal_solution: null, is_correct: false })
+    } catch {
+      const hasNumericInputs = /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
+      const fallbackHint = /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
+        ? 'Use an unquoted variable name with INPUT, such as INPUT Num1. Quotation marks are for text displayed by OUTPUT.'
+        : hasNumericInputs
+          ? 'Check the data type of each value read by INPUT. If the values are used in arithmetic, convert them to numbers before adding or comparing them.'
+          : 'Trace each INPUT, calculation, and OUTPUT with a sample value to find the first step where the result differs from what the problem requires.'
+      return json({ hint: fallbackHint, suggest_trace: false, ideal_solution: null, is_correct: false, fallback: true })
+    }
   }
   return json({ error: 'Not found' }, 404)
 }
