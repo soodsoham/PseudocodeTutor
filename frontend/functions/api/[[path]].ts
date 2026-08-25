@@ -105,6 +105,26 @@ async function geminiText(env: Env, prompt: string, maxTokens = 2000) {
     }
     if (response?.ok) break
   }
+  if (!response?.ok) {
+    for (const version of ['v1beta', 'v1']) {
+      const listResponse = await fetch(`https://generativelanguage.googleapis.com/${version}/models?key=${encodeURIComponent(env.GEMINI_API_KEY)}`)
+      if (!listResponse.ok) continue
+      const listed = (await listResponse.json()) as { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> }
+      const available = (listed.models ?? [])
+        .filter((item) => item.supportedGenerationMethods?.includes('generateContent') && typeof item.name === 'string')
+        .map((item) => String(item.name).replace(/^models\//, ''))
+        .filter((name) => /flash/i.test(name))
+      for (const model of available) {
+        response = await fetch(`https://generativelanguage.googleapis.com/${version}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 } }),
+        })
+        if (response.ok) break
+      }
+      if (response?.ok) break
+    }
+  }
   if (!response?.ok) throw new Error(`Gemini request failed (${response?.status ?? 'unavailable'})`)
   const result = (await response.json()) as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>
