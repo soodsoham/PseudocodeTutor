@@ -877,7 +877,10 @@ function CommunityPage() {
           attachment_image_samples: attachmentImageSamples,
           created_by: user.id,
         },
-        { timeout: 10000 },
+        // Moderation calls Gemini before the database insert. Allow for a
+        // cold start or a slower model response instead of treating it as a
+        // network outage after ten seconds.
+        { timeout: 45000 },
       )
 
       if (response.data.ok !== true) {
@@ -934,6 +937,10 @@ function CommunityPage() {
             `Could not submit problem.${detail ? ` ${detail}` : ''}`,
           )
         }
+      } else if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+        setSubmitMessage(
+          'Content moderation took too long. Please retry in a moment.',
+        )
       } else {
         setSubmitMessage(
           'Could not submit problem because the network or authentication service did not respond.',
