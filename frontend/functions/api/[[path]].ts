@@ -498,14 +498,13 @@ async function handleAi(request: Request, env: Env, path: string) {
     try {
       const hint = await geminiText(env, `You are a patient ${board} tutor helping a beginner. The numbered pseudocode below is the student's CURRENT work; inspect it line by line and base the response on what is actually written, not on a generic example. Identify the earliest concrete mismatch, missing requirement, syntax issue, or incorrect value. If an active line is supplied, start by checking that line. Explain the issue in simple English and give one small next step, without writing the complete solution. Answer a follow-up question directly and make later replies deeper. Refer to exact line numbers. Give at most four short sentences.\nProblem and specification:\n${problem}\nNumbered student pseudocode (authoritative current attempt):\n${numberedCode}\nCurrently selected line: ${activeLine ?? '(none)'}\nGenerated program code:\n${generatedCode || '(not available)'}\nStudent follow-up question:\n${question || '(initial hint)'}\nEarlier tutor chat:\n${history || '(none)'}`, 1000)
       return json({ hint, suggest_trace: false, ideal_solution: null, is_correct: false })
-    } catch (error) {
+    } catch {
       return json({
         hint: fallbackHint,
         suggest_trace: false,
         ideal_solution: null,
         is_correct: false,
         fallback: true,
-        provider_error: error instanceof Error ? error.message : 'Gemini request failed',
       })
     }
   }
