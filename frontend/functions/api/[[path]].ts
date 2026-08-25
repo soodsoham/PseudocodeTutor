@@ -415,8 +415,12 @@ async function handleCommunity(context: Context, path: string) {
   if (request.method === 'POST' && path === 'community/ai-solution') {
     const problemId = clean(body.problem_id, 80)
     const cached = await sql.query('select solution from public.community_ai_solutions where problem_id=$1', [problemId])
-    if (cached[0]) return json({ pseudocode: cached[0].solution, cached: true })
-    const prompt = `Write a complete correct ${clean(body.board, 80) || 'CIE IGCSE'} pseudocode solution. Add a // comment to each line. Output only pseudocode.\nProblem: ${clean(body.title, 200)}\n${clean(body.description)}`
+    const cachedText = typeof cached[0]?.solution === 'string' ? cached[0].solution : ''
+    // Older generations sometimes violated exam instructions by redeclaring
+    // pre-supplied arrays. Regenerate those answers once with the stricter prompt.
+    const staleCachedAnswer = /DECLARE\s+(NUM_STUDENTS|NUM_DAYS|StudentNames?)\b|ARRAY\s*\[/i.test(cachedText)
+    if (cachedText && !staleCachedAnswer) return json({ pseudocode: cachedText, cached: true })
+    const prompt = `Write a complete, correct ${clean(body.board, 80) || 'CIE IGCSE'} pseudocode model answer. Output only pseudocode with concise // comments explaining the logic.\n\nStrict exam instructions:\n- Treat every variable, array, and value explicitly stated as already provided as pre-existing. Do NOT DECLARE, initialise, resize, or rename StudentName[], ScreenTime[], ClassSize, or any other pre-supplied data.\n- Use the exact identifiers StudentName[], ScreenTime[], and ClassSize from the question. StudentName is 1D; ScreenTime is 2D with 7 days per student; corresponding indexes identify the same student.\n- You may declare only local loop counters/accumulators if the question allows it, but do not declare arrays. Use 1-based exam-style indexing.\n- Read all students' seven daily values with suitable INPUT messages, calculate each weekly total, count days over 300 minutes, convert each total to hours and remaining minutes, calculate the class average weekly minutes, find the lowest total and its student name, and output every required result.\n- Include suitable messages and preserve the requested output order.\n\nProblem title: ${clean(body.title, 200)}\nProblem:\n${clean(body.description)}`
     const solution = await geminiText(env, prompt, 2500)
     await sql.query(
       `insert into public.community_ai_solutions (problem_id,solution) values ($1,$2)
