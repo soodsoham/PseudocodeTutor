@@ -531,57 +531,37 @@ function CommunityPage() {
         const problemIdStr = String(selectedProblem.id)
         const AI_CACHE_KEY = 'pseudo_wizard_ai_solutions'
 
-        if (!user) {
-          // Guest: check localStorage cache first
+        // Every browser uses the same server-side cache keyed by problem_id.
+        // The first successful request generates and stores the answer in Neon;
+        // later requests only read that saved answer.
+        try {
+          const response = await fastapi.post<AISolutionPayload>('/community/ai-solution', {
+            problem_id: problemIdStr,
+            title: selectedProblem.title,
+            description: selectedProblem.description,
+            board: selectedProblem.board || boardLabels[activeBoard] || 'CIE IGCSE',
+            inputs: '',
+            outputs: '',
+            constraints: '',
+          })
+          const returnedSolution = response.data.solution ?? response.data.pseudocode
+          const solutionText =
+            typeof returnedSolution === 'string' && returnedSolution.trim()
+              ? returnedSolution
+              : '// Could not generate solution'
+          setAiSolution(solutionText)
+          try {
+            const raw = localStorage.getItem(AI_CACHE_KEY)
+            const cache = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>
+            cache[problemIdStr] = { pseudocode: solutionText, generatedAt: new Date().toISOString() }
+            localStorage.setItem(AI_CACHE_KEY, JSON.stringify(cache))
+          } catch { /* ignore */ }
+        } catch {
+          // A previously cached local answer is still useful during a short API outage.
           try {
             const raw = localStorage.getItem(AI_CACHE_KEY)
             const cache = (raw ? JSON.parse(raw) : {}) as Record<string, { pseudocode: string }>
-            if (cache[problemIdStr]?.pseudocode) {
-              setAiSolution(cache[problemIdStr].pseudocode)
-              setIsLoadingAiSolution(false)
-              return
-            }
-          } catch { /* ignore */ }
-
-          // Not cached — call /solve
-          try {
-            const response = await fastapi.post<{ pseudocode: string }>('/solve', {
-              problem: selectedProblem.description,
-              board: selectedProblem.board || boardLabels[activeBoard] || 'CIE IGCSE',
-            })
-            const text =
-              typeof response.data.pseudocode === 'string' && response.data.pseudocode.trim()
-                ? response.data.pseudocode
-                : '// Could not generate solution'
-            setAiSolution(text)
-            // Cache in localStorage
-            try {
-              const raw = localStorage.getItem(AI_CACHE_KEY)
-              const cache = (raw ? JSON.parse(raw) : {}) as Record<string, unknown>
-              cache[problemIdStr] = { pseudocode: text, generatedAt: new Date().toISOString() }
-              localStorage.setItem(AI_CACHE_KEY, JSON.stringify(cache))
-            } catch { /* ignore */ }
-          } catch {
-            setAiSolution('// Could not generate solution')
-          }
-        } else {
-          // Logged-in: use server-side cached AI solution
-          try {
-            const response = await fastapi.post<AISolutionPayload>('/community/ai-solution', {
-              problem_id: problemIdStr,
-              title: selectedProblem.title,
-              description: selectedProblem.description,
-              board: selectedProblem.board || boardLabels[activeBoard] || 'CIE IGCSE',
-              inputs: '',
-              outputs: '',
-              constraints: '',
-            })
-            const returnedSolution = response.data.solution ?? response.data.pseudocode
-            const solutionText =
-              typeof returnedSolution === 'string' && returnedSolution.trim()
-                ? returnedSolution
-                : '// Could not generate solution'
-            setAiSolution(solutionText)
+            setAiSolution(cache[problemIdStr]?.pseudocode ?? '// Could not generate solution')
           } catch {
             setAiSolution('// Could not generate solution')
           }

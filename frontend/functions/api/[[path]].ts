@@ -413,7 +413,6 @@ async function handleCommunity(context: Context, path: string) {
   }
 
   if (request.method === 'POST' && path === 'community/ai-solution') {
-    await requireUser(request, env)
     const problemId = clean(body.problem_id, 80)
     const cached = await sql.query('select solution from public.community_ai_solutions where problem_id=$1', [problemId])
     if (cached[0]) return json({ pseudocode: cached[0].solution, cached: true })
