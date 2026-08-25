@@ -43,13 +43,17 @@ function extractBaseIdentifier(expression: string) {
 function parseInputSpec(raw: string): InputSpec {
   const trimmed = raw.trim()
   const typedMatch = trimmed.match(/^(.+?)\s+AS\s+([A-Za-z_]\w*)$/i)
+  const normalizeTarget = (value: string) => {
+    const quotedIdentifier = value.trim().match(/^["']([A-Za-z_]\w*)["']$/)
+    return quotedIdentifier ? quotedIdentifier[1] : value.trim()
+  }
   if (typedMatch) {
     return {
-      target: typedMatch[1].trim(),
+      target: normalizeTarget(typedMatch[1]),
       declaredType: typedMatch[2].trim().toUpperCase(),
     }
   }
-  return { target: trimmed, declaredType: null }
+  return { target: normalizeTarget(trimmed), declaredType: null }
 }
 
 function parseDeclareSpec(raw: string) {

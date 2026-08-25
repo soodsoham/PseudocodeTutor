@@ -35,7 +35,11 @@ function HintsBar() {
 
       setCurrentHint(hint)
     } catch {
-      setCurrentHint('Could not get hint. Try again.')
+      if (/^\s*INPUT\s+["'][A-Za-z_]\w*["']/im.test(pseudocode)) {
+        setCurrentHint('INPUT should name the variable without quotation marks, for example INPUT Num1. Quotation marks are for text displayed by OUTPUT.')
+      } else {
+        setCurrentHint('Could not get hint. Check the problem and pseudocode, then try again.')
+      }
     } finally {
       setIsLoading(false)
     }
