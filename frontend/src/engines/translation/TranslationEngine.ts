@@ -52,6 +52,13 @@ function parseInputSpec(raw: string): InputSpec {
   return { target: trimmed, declaredType: null }
 }
 
+function parseDeclareSpec(raw: string) {
+  const match = raw.trim().match(/^DECLARE\s+(.+?)\s*:\s*([A-Za-z_]\w*)$/i)
+  if (!match) return null
+  const names = match[1].split(',').map((name) => name.trim()).filter(isSimpleIdentifier)
+  return names.length > 0 ? { names, declaredType: match[2].toUpperCase() } : null
+}
+
 function getPythonInputExpression(declaredType: string | null) {
   if (declaredType === 'STRING') {
     return 'str(input())'
@@ -610,9 +617,9 @@ function buildKnownVariables(sourceLines: string[], upToIndex: number): Set<stri
       }
     }
 
-    match = previousTrimmed.match(/^DECLARE\s+(\w+)\s*:/i)
-    if (match) {
-      knownVariables.add(match[1])
+    const declareSpec = parseDeclareSpec(previousTrimmed)
+    if (declareSpec) {
+      declareSpec.names.forEach((name) => knownVariables.add(name))
     }
 
     match = previousTrimmed.match(/^(?!FOR\b)(.+?)\s*(?:←|<-|->)\s*.+$/i)
@@ -732,9 +739,9 @@ function translateConcreteLinePython(
     return [`${indent}${target} = ${inputExpression}`]
   }
 
-  match = trimmed.match(/^DECLARE\s+(\w+)\s*:\s*(.+)$/i)
-  if (match) {
-    return [`${indent}# ${match[1]}: ${match[2].trim()}`]
+  if (parseDeclareSpec(trimmed)) {
+    // Python is dynamically typed; declarations have no executable equivalent.
+    return ['']
   }
 
   match = trimmed.match(/^CALL\s+(\w+\s*\(.*\))$/i)
@@ -838,10 +845,10 @@ function translateConcreteLineJava(
     return [`${indent}${declaredJavaType} ${target} = ${inputExpression};`]
   }
 
-  match = trimmed.match(/^DECLARE\s+(\w+)\s*:\s*(\w+)$/i)
-  if (match) {
-    const javaType = JAVA_TYPES[match[2].toUpperCase()] ?? 'Object'
-    return [`${indent}${javaType} ${match[1]};`]
+  const javaDeclare = parseDeclareSpec(trimmed)
+  if (javaDeclare) {
+    const javaType = JAVA_TYPES[javaDeclare.declaredType] ?? 'Object'
+    return [`${indent}${javaType} ${javaDeclare.names.join(', ')};`]
   }
 
   match = trimmed.match(/^CALL\s+(\w+\s*\(.*\))$/i)
@@ -944,10 +951,10 @@ function translateConcreteLineCpp(
     return [`${indent}${declaredCppType} ${target}; cin >> ${target};`]
   }
 
-  match = trimmed.match(/^DECLARE\s+(\w+)\s*:\s*(\w+)$/i)
-  if (match) {
-    const cppType = CPP_TYPES[match[2].toUpperCase()] ?? 'auto'
-    return [`${indent}${cppType} ${match[1]};`]
+  const cppDeclare = parseDeclareSpec(trimmed)
+  if (cppDeclare) {
+    const cppType = CPP_TYPES[cppDeclare.declaredType] ?? 'auto'
+    return [`${indent}${cppType} ${cppDeclare.names.join(', ')};`]
   }
 
   match = trimmed.match(/^CALL\s+(\w+\s*\(.*\))$/i)
@@ -1056,10 +1063,10 @@ function translateConcreteLineVb(
     return [`${indent}Dim ${target} As ${declaredVbType} = ${inputExpression}`]
   }
 
-  match = trimmed.match(/^DECLARE\s+(\w+)\s*:\s*(\w+)$/i)
-  if (match) {
-    const vbType = VB_TYPES[match[2].toUpperCase()] ?? 'Object'
-    return [`${indent}Dim ${match[1]} As ${vbType}`]
+  const vbDeclare = parseDeclareSpec(trimmed)
+  if (vbDeclare) {
+    const vbType = VB_TYPES[vbDeclare.declaredType] ?? 'Object'
+    return [`${indent}Dim ${vbDeclare.names.map((name) => `${name} As ${vbType}`).join(', ')}`]
   }
 
   match = trimmed.match(/^CALL\s+(\w+\s*\(.*\))$/i)
