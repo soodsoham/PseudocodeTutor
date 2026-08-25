@@ -123,11 +123,17 @@ async function moderateSubmission(env: Env, text: string, imageSamples: string[]
       parts.push({ inline_data: { mime_type: match[1], data: match[2] } })
     }
   }
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`, {
+  const moderateParts = async (partsToSend: Array<Record<string, unknown>>) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts }], generationConfig: { maxOutputTokens: 300, temperature: 0.1 } }),
+    body: JSON.stringify({ contents: [{ parts: partsToSend }], generationConfig: { maxOutputTokens: 300, temperature: 0.1 } }),
   })
+  let response = await moderateParts(parts)
+  // A PDF with several rendered pages can exceed Gemini's multimodal request
+  // limit. Retry with the first reduced page sample before failing closed.
+  if (!response.ok && imageSamples.length > 1) {
+    response = await moderateParts([parts[0], parts[1]])
+  }
   if (!response.ok) throw new Error(`Gemini moderation failed (${response.status})`)
   const resultBody = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> }
   const responseParts = resultBody.candidates?.[0]?.content?.parts ?? []

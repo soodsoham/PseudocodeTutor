@@ -174,17 +174,17 @@ async function extractPdfModerationData(file: File) {
       combinedText += `\n[Page ${pageNumber}] ${pageText}`
     }
 
-    const viewport = page.getViewport({ scale: 1.2 })
-    const maxWidth = 900
+    const viewport = page.getViewport({ scale: 1 })
+    const maxWidth = 480
     const widthScale = viewport.width > maxWidth ? maxWidth / viewport.width : 1
-    const renderViewport = page.getViewport({ scale: 1.2 * widthScale })
+    const renderViewport = page.getViewport({ scale: widthScale })
     const canvas = document.createElement('canvas')
     canvas.width = Math.max(1, Math.floor(renderViewport.width))
     canvas.height = Math.max(1, Math.floor(renderViewport.height))
     const context = canvas.getContext('2d')
     if (context) {
       await page.render({ canvasContext: context, viewport: renderViewport, canvas }).promise
-      imageSamples.push(canvas.toDataURL('image/jpeg', 0.65))
+      imageSamples.push(canvas.toDataURL('image/jpeg', 0.5))
     }
   }
 
