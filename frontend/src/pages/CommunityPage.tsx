@@ -383,9 +383,32 @@ function CommunityPage() {
   }, [accountKey, activeBoard])
 
   useEffect(() => {
-    if (!sharedProblemId || selectedProblem || problems.length === 0) return
+    if (!sharedProblemId || selectedProblem) return
     const match = problems.find((problem) => String(problem.id) === sharedProblemId)
-    if (match) setSelectedProblem(match)
+    if (match) {
+      setSelectedProblem(match)
+      return
+    }
+    // Shared links must work even when the visitor's selected board differs
+    // from the problem's board, so fetch the problem directly as a fallback.
+    void fastapi.get<{ problem?: Record<string, unknown> }>(`/community/problems/${encodeURIComponent(sharedProblemId)}`)
+      .then((response) => {
+        const problem = response.data.problem
+        if (!problem) return
+        setSelectedProblem({
+          id: String(problem.id ?? sharedProblemId),
+          title: typeof problem.title === 'string' ? problem.title : 'Untitled',
+          description: typeof problem.description === 'string' ? problem.description : '',
+          difficulty: problem.difficulty === 'medium' || problem.difficulty === 'hard' ? problem.difficulty : 'easy',
+          board: typeof problem.board === 'string' ? problem.board : '',
+          language: typeof problem.language === 'string' ? problem.language : 'python',
+          created_at: typeof problem.created_at === 'string' ? problem.created_at : undefined,
+          solutionCount: 0,
+          upvoteCount: Number(problem.upvote_count) || 0,
+          downvoteCount: Number(problem.downvote_count) || 0,
+        })
+      })
+      .catch(() => undefined)
   }, [problems, selectedProblem, sharedProblemId])
 
   useEffect(() => {
