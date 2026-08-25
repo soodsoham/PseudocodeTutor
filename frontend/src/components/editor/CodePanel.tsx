@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 
@@ -11,7 +10,6 @@ function CodePanel() {
   const setActivePseudoLine = useEditorStore((state) => state.setActivePseudoLine)
   const setActiveCodeLine = useEditorStore((state) => state.setActiveCodeLine)
   const theme = useSettingsStore((state) => state.theme)
-  const [scrollTop, setScrollTop] = useState(0)
 
   const content =
     tier2Errors.length > 0
@@ -46,42 +44,8 @@ function CodePanel() {
       <div className="terminal-label">[ Program Code ]</div>
       <div style={{ position: 'relative', minHeight: 0, flex: 1, marginTop: '4px' }}>
         <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            zIndex: 1,
-            left: 0,
-            top: 0,
-            transform: `translateY(-${scrollTop}px)`,
-            width: '40px',
-            paddingRight: '7px',
-            textAlign: 'right',
-            color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
-            lineHeight: '25.6px',
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        >
-          {codeLines.map((_, index) => {
-            const highlighted = highlightedCodeLines.has(index + 1)
-            return (
-              <div
-                key={index + 1}
-                style={{
-                  height: '25.6px',
-                  lineHeight: '25.6px',
-                  background: highlighted ? (theme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,100,0.1)') : 'transparent',
-                }}
-              >
-                {index + 1}
-              </div>
-            )
-          })}
-        </div>
-        <div
           className="panel-scroll panel-content"
-          onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-          style={{ overflowX: 'auto', overflowY: 'auto', paddingLeft: '40px' }}
+          style={{ overflowX: 'auto', overflowY: 'auto' }}
         >
         {codeLines.map((line, index) => {
           const lineNumber = index + 1
@@ -119,7 +83,21 @@ function CodePanel() {
                 minWidth: '100%',
               }}
             >
-              {line}
+              <span
+                aria-hidden="true"
+                style={{
+                  flex: '0 0 32px',
+                  width: '32px',
+                  paddingRight: '4px',
+                  textAlign: 'right',
+                  color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
+                  lineHeight: '25.6px',
+                  userSelect: 'none',
+                }}
+              >
+                {lineNumber}
+              </span>
+              <span>{line}</span>
             </div>
           )
         })}
