@@ -376,7 +376,7 @@ function ProblemPanel() {
           <button
             type="button"
             className="terminal-button"
-            style={{ alignSelf: 'flex-start', whiteSpace: 'nowrap' }}
+            style={{ alignSelf: 'flex-start', whiteSpace: 'nowrap', marginTop: '12px' }}
             onClick={() => {
               setForm(emptyForm)
               setProblemCard(null)
