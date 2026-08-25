@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { translatePseudocode } from '../../engines/translation'
 import { useEditorStore } from '../../stores/editorStore'
 import { useSettingsStore } from '../../stores/settingsStore'
@@ -28,6 +28,8 @@ function PseudocodePanel() {
   const language = useSettingsStore((state) => state.language)
   const theme = useSettingsStore((state) => state.theme)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const [cursorLine, setCursorLine] = useState(activePseudoLine ?? 1)
+  const [scrollTop, setScrollTop] = useState(0)
 
   useEffect(() => {
     const translationResult = translatePseudocode(pseudocode, language)
@@ -88,6 +90,7 @@ function PseudocodePanel() {
 
   const syncActivePseudoLine = (selectionStart: number) => {
     const lineNumber = pseudocode.slice(0, selectionStart).split('\n').length
+    setCursorLine(lineNumber)
     setActivePseudoLine(lineNumber)
 
     const mappedCodeLines = lineMapping[lineNumber] ?? []
@@ -143,9 +146,43 @@ function PseudocodePanel() {
       <div className="terminal-cursor" style={{ marginTop: '8px', marginBottom: '16px' }}>
         {'>'}
       </div>
-      <textarea
-        ref={textareaRef}
-        value={pseudocode}
+      <div style={{ position: 'relative', minHeight: 0, flex: 1 }}>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            zIndex: 1,
+            left: 0,
+            top: '12px',
+            transform: `translateY(-${scrollTop}px)`,
+            width: '44px',
+            textAlign: 'right',
+            paddingRight: '10px',
+            color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
+            lineHeight: '1.6',
+            fontFamily: 'inherit',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        >
+          {Array.from({ length: Math.max(1, pseudocode.split('\n').length) }, (_, index) => (
+            <div
+              key={index + 1}
+              style={{
+                height: '25.6px',
+                color: index + 1 === cursorLine
+                  ? (theme === 'light' ? '#43464f' : '#ffffff')
+                  : undefined,
+                fontWeight: index + 1 === cursorLine ? 600 : 400,
+              }}
+            >
+              {index + 1}
+            </div>
+          ))}
+        </div>
+        <textarea
+          ref={textareaRef}
+          value={pseudocode}
         wrap="off"
         onChange={(event) => {
           setPseudocode(event.target.value)
@@ -239,6 +276,7 @@ function PseudocodePanel() {
             updatePseudocodeValue(textarea, next, newCursorPos)
           }
         }}
+        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
         placeholder="Write your pseudocode here..."
         className="terminal-textarea panel-scroll pseudocode-textarea"
         spellCheck={false}
@@ -247,11 +285,13 @@ function PseudocodePanel() {
           lineHeight: '1.6',
           tabSize: 2,
           whiteSpace: 'pre',
+          paddingLeft: '56px',
           overflowX: 'auto',
           overflowY: 'auto',
           ...activeLineBackground,
         }}
-      />
+        />
+      </div>
     </section>
   )
 }

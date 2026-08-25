@@ -397,20 +397,32 @@ async function handleAi(request: Request, env: Env, path: string) {
     const code = clean(body.pseudocode)
     const generatedCode = clean(body.generated_code)
     const attempt = Number(body.attempt_count) || 1
+    const question = clean(body.question, 600)
+    const history = Array.isArray(body.hint_history)
+      ? body.hint_history.slice(-8).map((item) => `${clean(item?.role, 20)}: ${clean(item?.text, 500)}`).join('\n')
+      : ''
+    const numberedCode = code
+      ? code.split('\n').map((line, index) => `${index + 1}. ${line}`).join('\n')
+      : '(nothing written yet)'
+    const fallbackHint = /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
+      ? 'Line 1 (or the INPUT line): use an unquoted variable name, such as INPUT Num1. Quotation marks are for words displayed by OUTPUT, not for the place where a number is stored.'
+      : /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
+        ? 'Look at the INPUT lines first. The values arrive as text, so convert them to numbers before doing arithmetic. Then check the line that calculates the total.'
+        : attempt > 1
+          ? `Look at the first line where your result differs from the expected result. Trace one example value through that line, then ask me about that line if it is still unclear.`
+          : 'Trace each INPUT, calculation, and OUTPUT with a small example. Find the first line where your result differs from what the question asks.'
     if (attempt >= 5) {
-      const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 2500)
-      return json({ hint: null, suggest_trace: true, ideal_solution: ideal, is_correct: false })
+      try {
+        const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 2500)
+        return json({ hint: 'You have tried several times. I have opened a model answer so you can compare it line by line.', suggest_trace: true, ideal_solution: ideal, is_correct: false })
+      } catch {
+        return json({ hint: `You have tried several times. ${fallbackHint}`, suggest_trace: false, ideal_solution: null, is_correct: false, fallback: true })
+      }
     }
     try {
-      const hint = await geminiText(env, `You are a ${board} tutor. Give a specific plain-English hint without revealing the full answer. Maximum three sentences. Prioritize runtime correctness, data types, input conversion, calculations, and required output over wording or style. Only mention wording when the algorithm is otherwise correct.\nProblem: ${problem}\nStudent pseudocode:\n${code || '(nothing written yet)'}\nGenerated program code:\n${generatedCode || '(not available)'}`, 800)
+      const hint = await geminiText(env, `You are a patient ${board} tutor helping a beginner who may not be a programmer. Reply in simple, friendly English, without jargon and without giving the complete answer. Refer to a specific pseudocode line number whenever possible (for example, "Line 4:"). Give at most four short sentences. If the student asked a follow-up, answer that question directly and make this reply a little deeper than the previous hints. Prioritise runtime correctness, data types, input conversion, calculations, and required output over wording.\nProblem:\n${problem}\nNumbered student pseudocode:\n${numberedCode}\nGenerated program code:\n${generatedCode || '(not available)'}\nStudent follow-up question:\n${question || '(initial hint)'}\nEarlier tutor chat:\n${history || '(none)'}`, 1000)
       return json({ hint, suggest_trace: false, ideal_solution: null, is_correct: false })
     } catch {
-      const hasNumericInputs = /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
-      const fallbackHint = /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
-        ? 'Use an unquoted variable name with INPUT, such as INPUT Num1. Quotation marks are for text displayed by OUTPUT.'
-        : hasNumericInputs
-          ? 'Check the data type of each value read by INPUT. If the values are used in arithmetic, convert them to numbers before adding or comparing them.'
-          : 'Trace each INPUT, calculation, and OUTPUT with a sample value to find the first step where the result differs from what the problem requires.'
       return json({ hint: fallbackHint, suggest_trace: false, ideal_solution: null, is_correct: false, fallback: true })
     }
   }
