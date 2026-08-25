@@ -558,15 +558,15 @@ function CommunityPage() {
             cache[problemIdStr] = { pseudocode: solutionText, generatedAt: new Date().toISOString() }
             localStorage.setItem(AI_CACHE_KEY, JSON.stringify(cache))
           } catch { /* ignore */ }
-        } catch {
-          // A previously cached local answer is still useful during a short API outage.
-          try {
-            const raw = localStorage.getItem(AI_CACHE_KEY)
-            const cache = (raw ? JSON.parse(raw) : {}) as Record<string, { pseudocode: string }>
-            setAiSolution(cache[problemIdStr]?.pseudocode ?? '// Could not generate solution')
           } catch {
-            setAiSolution('// Could not generate solution')
-          }
+            // A previously cached local answer is still useful during a short API outage.
+            try {
+              const raw = localStorage.getItem(AI_CACHE_KEY)
+              const cache = (raw ? JSON.parse(raw) : {}) as Record<string, { pseudocode: string }>
+              setAiSolution(cache[problemIdStr]?.pseudocode ?? '// AI solution is temporarily unavailable. Gemini did not return an answer; please try again later.')
+            } catch {
+              setAiSolution('// AI solution is temporarily unavailable. Gemini did not return an answer; please try again later.')
+            }
         }
         setIsLoadingAiSolution(false)
       })()

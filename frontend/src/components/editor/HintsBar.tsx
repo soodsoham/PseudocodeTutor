@@ -73,6 +73,7 @@ function HintsBar() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr)',
+          gridTemplateRows: 'auto minmax(0, 1fr)',
           gap: '16px',
           alignItems: 'start',
           height: '100%',
@@ -90,7 +91,7 @@ function HintsBar() {
             overflow: 'hidden',
             minWidth: 0,
             minHeight: 0,
-            height: '100%',
+            height: 'auto',
             paddingRight: '4px',
             display: 'flex',
             flexDirection: 'column',
