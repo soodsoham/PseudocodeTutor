@@ -1,5 +1,5 @@
 import { type MouseEvent, useState } from 'react'
-import { supabase } from '../../lib/supabaseClient'
+import { resetPasswordWithToken, supabase } from '../../lib/supabaseClient'
 
 type LoginModalProps = {
   isOpen: boolean
@@ -7,7 +7,10 @@ type LoginModalProps = {
 }
 
 function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
+  const resetToken = new URLSearchParams(window.location.search).get('token')
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'reset'>(
+    resetToken ? 'reset' : 'login',
+  )
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -112,6 +115,36 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setSuccessMessage('Password reset email sent. Check your inbox.')
   }
 
+  const handleResetPassword = async () => {
+    resetMessages()
+    if (!resetToken) {
+      setErrorMessage('This password reset link is invalid or has expired.')
+      return
+    }
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.')
+      return
+    }
+
+    setIsSubmitting(true)
+    const { error } = await resetPasswordWithToken(resetToken, password)
+    setIsSubmitting(false)
+    if (error) {
+      setErrorMessage(error.message || 'Could not reset password.')
+      return
+    }
+
+    window.history.replaceState({}, '', window.location.pathname)
+    setActiveTab('login')
+    setPassword('')
+    setConfirmPassword('')
+    setSuccessMessage('Password updated. You can now sign in.')
+  }
+
   return (
     <div
       className="modal-overlay"
@@ -133,6 +166,7 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
           padding: '32px',
         }}
       >
+        {activeTab !== 'reset' && (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
           <button
             type="button"
@@ -163,24 +197,33 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
             [ Register ]
           </button>
         </div>
+        )}
+
+        {activeTab === 'reset' && (
+          <div style={{ color: '#ffffff', marginBottom: '18px', fontSize: '18px' }}>
+            Choose a new password
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            style={{
-              width: '100%',
-              background: 'transparent',
-              border: '2px solid #ffffff',
-              borderRadius: '4px',
-              padding: '10px 14px',
-              color: '#ffffff',
-              fontSize: '16px',
-              outline: 'none',
-            }}
-          />
+          {activeTab !== 'reset' && (
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: '2px solid #ffffff',
+                borderRadius: '4px',
+                padding: '10px 14px',
+                color: '#ffffff',
+                fontSize: '16px',
+                outline: 'none',
+              }}
+            />
+          )}
 
           <input
             type="password"
@@ -199,7 +242,7 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
             }}
           />
 
-          {activeTab === 'register' && (
+          {(activeTab === 'register' || activeTab === 'reset') && (
             <input
               type="password"
               placeholder="Confirm Password"
@@ -225,7 +268,18 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <div style={{ color: '#7ed957', fontSize: '14px' }}>{successMessage}</div>
           )}
 
-          {activeTab === 'login' ? (
+          {activeTab === 'reset' ? (
+            <button
+              type="button"
+              className="terminal-button signin-btn"
+              onClick={() => {
+                void handleResetPassword()
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? '[ Updating... ]' : '[ Set New Password ]'}
+            </button>
+          ) : activeTab === 'login' ? (
             <>
               <button
                 type="button"
@@ -261,6 +315,7 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </button>
           )}
 
+          {activeTab !== 'reset' && (
           <button
             type="button"
             className="terminal-button google-btn"
@@ -271,6 +326,7 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
           >
             [ G Continue with Google ]
           </button>
+          )}
         </div>
       </div>
     </div>

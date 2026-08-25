@@ -21,3 +21,32 @@ export const supabase = createClient({
     url: dataApiUrl || 'https://data.invalid/rest/v1',
   },
 })
+
+type PasswordActionResult = {
+  error?: { message?: string } | null
+}
+
+type BetterAuthPasswordClient = {
+  resetPassword: (input: {
+    newPassword: string
+    token: string
+  }) => Promise<PasswordActionResult>
+  changePassword: (input: {
+    currentPassword: string
+    newPassword: string
+    revokeOtherSessions?: boolean
+  }) => Promise<PasswordActionResult>
+}
+
+const passwordClient = () =>
+  supabase.auth.getBetterAuthInstance() as unknown as BetterAuthPasswordClient
+
+export const resetPasswordWithToken = (token: string, newPassword: string) =>
+  passwordClient().resetPassword({ token, newPassword })
+
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  passwordClient().changePassword({
+    currentPassword,
+    newPassword,
+    revokeOtherSessions: true,
+  })

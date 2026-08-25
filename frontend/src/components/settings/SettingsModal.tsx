@@ -1,6 +1,6 @@
 import { type MouseEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabaseClient'
+import { changePassword, supabase } from '../../lib/supabaseClient'
 import { useAuthStore } from '../../stores/authStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 
@@ -52,6 +52,10 @@ function SettingsModal({
   }
 
   const handleChangePassword = async () => {
+    const currentPassword = window.prompt('Enter your current password')
+    if (!currentPassword) {
+      return
+    }
     const nextPassword = window.prompt('Enter new password (min 6 characters)')
     if (!nextPassword) {
       return
@@ -62,9 +66,9 @@ function SettingsModal({
       return
     }
 
-    const { error } = await supabase.auth.updateUser({ password: nextPassword })
+    const { error } = await changePassword(currentPassword, nextPassword)
     if (error) {
-      setAccountMessage(error.message)
+      setAccountMessage(error.message || 'Could not update password.')
       return
     }
 
