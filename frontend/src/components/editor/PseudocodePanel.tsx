@@ -283,7 +283,7 @@ function PseudocodePanel() {
           lineHeight: '1.6',
           tabSize: 2,
           whiteSpace: 'pre',
-          paddingLeft: '56px',
+          paddingLeft: '8px',
           paddingTop: 0,
           paddingBottom: 0,
           overflowX: 'auto',
