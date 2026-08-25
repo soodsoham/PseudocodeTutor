@@ -471,21 +471,19 @@ async function handleAi(request: Request, env: Env, path: string) {
       : '(nothing written yet)'
     const quotedInputLine = Math.max(1, code.split('\n').findIndex((line) => /INPUT\s+["'][A-Za-z_]\w*["']/i.test(line)) + 1)
     const arithmeticLine = Math.max(1, code.split('\n').findIndex((line) => /[+*/-]/.test(line) && !/^\s*\/\//.test(line)) + 1)
-    const fallbackHint = /\b(sum|add|addition|total|plus)\b/i.test(problem) && !code
-      ? 'For this addition problem, start with four simple steps: OUTPUT "Enter the first number", INPUT Num1, OUTPUT "Enter the second number", then INPUT Num2. After that, calculate Sum <- Num1 + Num2 and OUTPUT Sum.'
-      : /\b(name|username|user's name)\b/i.test(question) && !code
-      ? 'To ask for someone’s name, write two lines: OUTPUT "What is your name?" followed by INPUT Name. Do not put quotation marks around Name because it is the variable that stores the answer.'
-      : /\b(name|username|user's name)\b/i.test(question)
-        ? 'Use OUTPUT for the question shown on screen, then INPUT with a variable: OUTPUT "What is your name?" and INPUT Name. The variable Name stores what the person types.'
-        : !code
-          ? 'Start by writing the first action the problem asks for. For example, use OUTPUT "What is your name?" to display a question, then INPUT Name to store the reply.'
-          : /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
-      ? `Line ${quotedInputLine}: use an unquoted variable name, such as INPUT Num1. Quotation marks are for words displayed by OUTPUT, not for the place where a number is stored.`
-      : /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
-        ? `Check the INPUT lines before line ${arithmeticLine}. The values arrive as text, so convert them to numbers before doing arithmetic. Then check the line that calculates the total.`
-        : attempt > 1
-          ? `Try this concrete check: choose a small example input, write down what line 1 should do, then compare it with your next line. Tell me the exact line and value that confused you.`
-          : 'Use a small example and check one instruction at a time. For an input question, your first steps are usually OUTPUT a clear question, then INPUT a variable to store the reply.'
+    const firstRequirement = problem
+      .split(/[.!?\n]/)
+      .map((item) => item.trim())
+      .find((item) => item.length > 12)
+    const fallbackHint = !code
+      ? `Start with the first requirement in the question: “${(firstRequirement || 'read the required input').slice(0, 180)}”. Write the single OUTPUT or INPUT line that performs that action, then ask again so we can check the next step.`
+      : /INPUT\s+["'][A-Za-z_]\w*["']/i.test(code)
+        ? `Line ${quotedInputLine}: the value being stored must be an unquoted variable name. Keep quotation marks only around words displayed by OUTPUT, then check the next line against the question.`
+        : /\binput\(\)/i.test(generatedCode) && /[+*/-]/.test(generatedCode)
+          ? `Check the INPUT lines before line ${arithmeticLine}. Those values may still be text when the calculation runs; trace one example value into the calculation and compare it with the required result.`
+          : attempt > 1
+            ? `Trace one concrete example through lines 1–${Math.max(1, code.split('\\n').length)}. Find the first line whose action or value differs from the question, and ask about that line.`
+            : `Read the first requirement and compare it with line 1 of your pseudocode. Explain what that line is supposed to do, then check whether its variable and output match the question.`
     if (attempt >= 5) {
       try {
         const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 2500)
