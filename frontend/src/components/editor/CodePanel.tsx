@@ -88,8 +88,8 @@ function CodePanel() {
                 style={{
                   flex: '0 0 32px',
                   width: '32px',
-                  paddingRight: '4px',
-                  textAlign: 'right',
+                  paddingLeft: '10px',
+                  textAlign: 'left',
                   color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
                   lineHeight: '25.6px',
                   userSelect: 'none',
