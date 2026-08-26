@@ -214,6 +214,24 @@ body.light-mode .hint-input-shell {
   border-color: #8a8d96 !important;
 }
 
+body.light-mode .hint-message,
+body.light-mode .attachment-card,
+body.light-mode .attachment-preview-card {
+  border-color: #8a8d96 !important;
+}
+
+body.light-mode .hint-input-shell::placeholder {
+  color: #8a8d96 !important;
+}
+
+body.light-mode .community-upvote-active {
+  color: #2f9e44 !important;
+}
+
+body.light-mode .community-downvote-active {
+  color: #d64545 !important;
+}
+
 body.light-mode .problem-divider {
   border-color: #8a8d96 !important;
 }

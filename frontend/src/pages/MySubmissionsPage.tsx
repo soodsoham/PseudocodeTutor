@@ -473,6 +473,7 @@ function MySubmissionsPage() {
             )}
             {(isLoadingAttachment || attachmentPreviewUrl) && (
               <div
+                className="attachment-card"
                 style={{
                   marginTop: '12px',
                   border: '2px solid #ababb6',
@@ -512,7 +513,7 @@ function MySubmissionsPage() {
                       </div>
                     )}
                     {!isLoadingAttachment && attachmentPreviewUrl && (
-                      <div style={{ border: '2px solid #ababb6', borderRadius: '8px', overflow: 'hidden' }}>
+                      <div className="attachment-preview-card" style={{ border: '2px solid #ababb6', borderRadius: '8px', overflow: 'hidden' }}>
                         <iframe
                           title="Attached PDF preview"
                           src={attachmentPreviewUrl}

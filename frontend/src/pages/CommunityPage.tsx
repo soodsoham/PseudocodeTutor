@@ -1378,10 +1378,10 @@ function CommunityPage() {
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               <button type="button" className="terminal-button" disabled={isVoting} onClick={() => void handleVote('up')}>
-                <span style={{ color: myVote === 'up' ? '#7ed957' : undefined }}>[ ▲ {selectedProblem.upvoteCount} ]</span>
+                <span className={myVote === 'up' ? 'community-upvote-active' : undefined} style={{ color: myVote === 'up' ? '#7ed957' : undefined }}>[ ▲ {selectedProblem.upvoteCount} ]</span>
               </button>
               <button type="button" className="terminal-button" disabled={isVoting} onClick={() => void handleVote('down')}>
-                <span style={{ color: myVote === 'down' ? '#ff6b6b' : undefined }}>[ ▼ {selectedProblem.downvoteCount} ]</span>
+                <span className={myVote === 'down' ? 'community-downvote-active' : undefined} style={{ color: myVote === 'down' ? '#ff6b6b' : undefined }}>[ ▼ {selectedProblem.downvoteCount} ]</span>
               </button>
               <button type="button" className="terminal-button" onClick={() => void handleCopyProblemLink()}>
                 [ Copy Link ]
@@ -1393,7 +1393,7 @@ function CommunityPage() {
 
             {(isLoadingAttachments || attachmentPdfUrl || attachmentsError) && (
               <div
-                className="interactive-hover-card"
+                className="interactive-hover-card attachment-card"
                 style={{
                   marginTop: '12px',
                   border: '2px solid #ababb6',
@@ -1446,6 +1446,7 @@ function CommunityPage() {
                     )}
                     {!isLoadingAttachments && !attachmentsError && attachmentPdfUrl && (
                       <div
+                        className="attachment-preview-card"
                         style={{
                           border: '2px solid #ababb6',
                           borderRadius: '8px',

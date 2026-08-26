@@ -144,6 +144,7 @@ function HintsBar() {
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
+                className="hint-message"
                 style={{
                   alignSelf: message.role === 'student' ? 'flex-end' : 'flex-start',
                   maxWidth: '92%',
