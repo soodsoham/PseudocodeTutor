@@ -1590,11 +1590,14 @@ function CommunityPage() {
                       margin: '10px 0 0',
                       // Keep long generated answers inside the card while allowing
                       // the reader to scroll through the complete solution.
-                      maxHeight: '50vh',
-                      overflowY: 'auto',
+                      maxHeight: '60vh',
+                      minHeight: '120px',
+                      overflowY: 'scroll',
                       overflowX: 'auto',
-                      minHeight: 0,
                       overscrollBehavior: 'contain',
+                      scrollbarGutter: 'stable',
+                      display: 'block',
+                      width: '100%',
                       padding: '2px 8px 8px 0',
                       whiteSpace: 'pre-wrap',
                       color: '#ffffff',

@@ -463,7 +463,7 @@ async function handleCommunity(context: Context, path: string) {
     if (cachedText && !staleCachedAnswer) return json({ pseudocode: cachedText, cached: true })
     const attachmentText = clean(body.pdf_text, 24000)
     const prompt = `Write a complete, correct ${clean(body.board, 80) || 'CIE IGCSE'} pseudocode model answer. Output only pseudocode with concise // comments explaining the logic.\n\nStrict exam instructions:\n- Treat every variable, array, and value explicitly stated as already provided as pre-existing. Do NOT DECLARE, initialise, resize, or rename any pre-supplied data.\n- Read the entire question and attached reference text before solving. Follow every bullet and constraint; never invent requirements or constants.\n- Use the exact identifiers and indexing conventions from the question.\n- You may declare only local loop counters/accumulators if the question allows it, but do not declare arrays that the question says already exist.\n- Before returning, audit that every required input, calculation, condition, conversion, and output is present and that the pseudocode is syntactically valid for the requested board.\n\nProblem title: ${clean(body.title, 200)}\nProblem:\n${clean(body.description)}\n\nAttached/reference PDF text (use as specification context):\n${attachmentText || '(none)'}`
-    const solution = await geminiText(env, prompt, 2500)
+    const solution = await geminiText(env, prompt, 6000)
     await sql.query(
       `insert into public.community_ai_solutions (problem_id,solution) values ($1,$2)
        on conflict (problem_id) do update set solution=excluded.solution,updated_at=now()`,
@@ -484,7 +484,7 @@ async function handleAi(request: Request, env: Env, path: string) {
     .join('\n\n')
   const board = clean(body.board, 80) || 'CIE IGCSE'
   if (path === 'solve') {
-    const result = await geminiText(env, `You are a ${board} Computer Science teacher. Write a complete correct pseudocode solution for this problem. Add a // comment on every line. Output only pseudocode.\n${problem}`, 2500)
+    const result = await geminiText(env, `You are a ${board} Computer Science teacher. Write a complete correct pseudocode solution for this problem. Add a // comment on every line. Output only pseudocode.\n${problem}`, 5000)
     return json({ pseudocode: result })
   }
   if (path === 'optimise') {
@@ -524,14 +524,14 @@ async function handleAi(request: Request, env: Env, path: string) {
             : `Read the first requirement and compare it with line 1 of your pseudocode. Explain what that line is supposed to do, then check whether its variable and output match the question.`
     if (attempt >= 5) {
       try {
-        const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 2500)
+        const ideal = await geminiText(env, `Write the ideal ${board} model-answer pseudocode for this problem. Output only pseudocode.\n${problem}`, 5000)
         return json({ hint: 'You have tried several times. I have opened a model answer so you can compare it line by line.', suggest_trace: true, ideal_solution: ideal, is_correct: false })
       } catch {
         return json({ hint: `You have tried several times. ${fallbackHint}`, suggest_trace: false, ideal_solution: null, is_correct: false, fallback: true })
       }
     }
     try {
-      const hint = await geminiText(env, `You are a patient ${board} tutor helping a beginner. The numbered pseudocode below is the student's CURRENT work; inspect it line by line and base the response on what is actually written, not on a generic example. Identify the earliest concrete mismatch, missing requirement, syntax issue, or incorrect value. If an active line is supplied, start by checking that line. Explain the issue in simple English and give one small next step, without writing the complete solution. Answer a follow-up question directly and make later replies deeper. Refer to exact line numbers. Give at most four short sentences.\nProblem and specification:\n${problem}\nNumbered student pseudocode (authoritative current attempt):\n${numberedCode}\nCurrently selected line: ${activeLine ?? '(none)'}\nGenerated program code:\n${generatedCode || '(not available)'}\nStudent follow-up question:\n${question || '(initial hint)'}\nEarlier tutor chat:\n${history || '(none)'}`, 1000)
+      const hint = await geminiText(env, `You are a patient ${board} tutor helping a beginner. The numbered pseudocode below is the student's CURRENT work; inspect it line by line and base the response on what is actually written, not on a generic example. Identify the earliest concrete mismatch, missing requirement, syntax issue, or incorrect value. If an active line is supplied, start by checking that line. Explain the issue in simple English and give one small next step, without writing the complete solution. Answer a follow-up question directly and make later replies deeper. Refer to exact line numbers. Give at most four short sentences.\nProblem and specification:\n${problem}\nNumbered student pseudocode (authoritative current attempt):\n${numberedCode}\nCurrently selected line: ${activeLine ?? '(none)'}\nGenerated program code:\n${generatedCode || '(not available)'}\nStudent follow-up question:\n${question || '(initial hint)'}\nEarlier tutor chat:\n${history || '(none)'}`, 1800)
       return json({ hint, suggest_trace: false, ideal_solution: null, is_correct: false })
     } catch {
       return json({
