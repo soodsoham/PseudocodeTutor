@@ -287,6 +287,13 @@ body.light-mode .interactive-hover-card:hover * {
   color: #eaeaeb !important;
 }
 
+/* Attachment panels use a light surface in light mode; keep their labels
+   readable when the cursor is over the collapsible card. */
+body.light-mode .attachment-card:hover,
+body.light-mode .attachment-card:hover * {
+  color: #43464f !important;
+}
+
 .difficulty-badge.difficulty-easy {
   color: #7ed957 !important;
 }
