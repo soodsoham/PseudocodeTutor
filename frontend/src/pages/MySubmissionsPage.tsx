@@ -71,6 +71,7 @@ function MySubmissionsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState<string | null>(null)
   const [isLoadingAttachment, setIsLoadingAttachment] = useState(false)
+  const [expandedAttachmentPreview, setExpandedAttachmentPreview] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -160,6 +161,7 @@ function MySubmissionsPage() {
     setIsEditing(false)
     setShowDeleteConfirm(false)
     setAttachmentPreviewUrl(null)
+    setExpandedAttachmentPreview(false)
     setIsLoadingAttachment(true)
     void (async () => {
       try {
@@ -469,35 +471,57 @@ function MySubmissionsPage() {
                 {selectedSubmission.description}
               </div>
             )}
-            {isLoadingAttachment && (
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
-                Loading attached PDF...
-              </div>
-            )}
-            {attachmentPreviewUrl && (
+            {(isLoadingAttachment || attachmentPreviewUrl) && (
               <div
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  minHeight: '420px',
+                  marginTop: '12px',
+                  border: '2px solid #ababb6',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  color: '#ffffff',
+                  overflow: 'hidden',
                 }}
               >
-                <div className="terminal-label" style={{ fontSize: '18px' }}>
-                  [ Attached PDF ]
-                </div>
-                <iframe
-                  title="Attached PDF preview"
-                  src={attachmentPreviewUrl}
+                <button
+                  type="button"
+                  onClick={() => setExpandedAttachmentPreview((current) => !current)}
                   style={{
                     width: '100%',
-                    minHeight: '520px',
-                    flex: 1,
-                    border: '2px solid #ababb6',
-                    borderRadius: '4px',
-                    background: '#ffffff',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#ffffff',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    padding: '10px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '8px',
                   }}
-                />
+                >
+                  <span style={{ fontSize: '14px' }}>📎 File Attached</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>
+                    {expandedAttachmentPreview ? 'Collapse ▲' : 'Expand ▼'}
+                  </span>
+                </button>
+                {expandedAttachmentPreview && (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', padding: '10px' }}>
+                    {isLoadingAttachment && (
+                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
+                        Loading attached file...
+                      </div>
+                    )}
+                    {!isLoadingAttachment && attachmentPreviewUrl && (
+                      <div style={{ border: '2px solid #ababb6', borderRadius: '8px', overflow: 'hidden' }}>
+                        <iframe
+                          title="Attached PDF preview"
+                          src={attachmentPreviewUrl}
+                          style={{ width: '100%', height: '520px', border: 0, background: '#ffffff', display: 'block' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
