@@ -143,7 +143,17 @@ function PseudocodePanel() {
   return (
     <section className="terminal-panel panel" style={{ minHeight: '100%' }}>
       <div className="terminal-label">[ Pseudocode ]</div>
-      <div style={{ position: 'relative', minHeight: 0, flex: 1, marginTop: '4px' }}>
+      <div
+        style={{
+          position: 'relative',
+          minHeight: 0,
+          flex: '1 1 auto',
+          marginTop: '4px',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         <div
           aria-hidden="true"
           style={{
@@ -280,6 +290,10 @@ function PseudocodePanel() {
         spellCheck={false}
         style={{
           color: theme === 'light' ? '#43464f' : '#ffffff',
+          display: 'block',
+          flex: '1 1 auto',
+          height: '100%',
+          minHeight: 0,
           lineHeight: '1.6',
           tabSize: 2,
           whiteSpace: 'pre',
