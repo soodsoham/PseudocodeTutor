@@ -1,4 +1,6 @@
 import { getHint } from '../../api/hints'
+import { fastapi } from '../../api/fastapi'
+import { extractPdfTextFromArrayBuffer } from '../../lib/pdfText'
 import { useEffect, useState } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
 import { useHintStore } from '../../stores/hintStore'
@@ -7,6 +9,7 @@ import { useSettingsStore } from '../../stores/settingsStore'
 function HintsBar() {
   const problemCard = useEditorStore((state) => state.problemCard)
   const problemAttachmentText = useEditorStore((state) => state.problemAttachmentText)
+  const problemAttachmentPreviewUrl = useEditorStore((state) => state.problemAttachmentPreviewUrl)
   const pseudocode = useEditorStore((state) => state.pseudocode)
   const generatedCode = useEditorStore((state) => state.generatedCode)
   const activePseudoLine = useEditorStore((state) => state.activePseudoLine)
@@ -32,9 +35,33 @@ function HintsBar() {
     }
 
     try {
+      let attachmentText = problemAttachmentText
+      // A community PDF can finish rendering before its extracted text reaches
+      // the shared editor store. If that happens, extract it from the already
+      // loaded preview before asking the tutor so the hint sees the same
+      // specification that answer generation sees.
+      if (!attachmentText.trim() && problemAttachmentPreviewUrl) {
+        try {
+          const requestPath = problemAttachmentPreviewUrl.replace(/^\/api(?=\/)/, '')
+          const fileResponse = await fastapi.get<ArrayBuffer>(requestPath, {
+            responseType: 'arraybuffer',
+          })
+          const value: unknown = fileResponse.data
+          const buffer = value instanceof ArrayBuffer
+            ? value
+            : ArrayBuffer.isView(value)
+              ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength).slice().buffer
+              : null
+          if (buffer) {
+            attachmentText = await extractPdfTextFromArrayBuffer(buffer, 12)
+          }
+        } catch {
+          // Keep the normal request alive; the API will still use the problem text.
+        }
+      }
       const response = await getHint({
         problem: problemCard?.description ?? '',
-        attachment_text: problemCard ? problemAttachmentText : '',
+        attachment_text: problemCard ? attachmentText : '',
         pseudocode,
         generated_code: generatedCode,
         active_line: activePseudoLine,
