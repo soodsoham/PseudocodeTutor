@@ -10,6 +10,8 @@ function CodePanel() {
   const setActivePseudoLine = useEditorStore((state) => state.setActivePseudoLine)
   const setActiveCodeLine = useEditorStore((state) => state.setActiveCodeLine)
   const theme = useSettingsStore((state) => state.theme)
+  const textSize = useSettingsStore((state) => state.textSize)
+  const lineNumberFontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '20px' : '16px'
 
   const content =
     tier2Errors.length > 0
@@ -101,6 +103,7 @@ function CodePanel() {
                   paddingLeft: '10px',
                   textAlign: 'left',
                   color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
+                  fontSize: lineNumberFontSize,
                   lineHeight: '25.6px',
                   userSelect: 'none',
                 }}

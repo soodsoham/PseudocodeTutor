@@ -32,6 +32,8 @@ function PseudocodePanel() {
   const setActiveCodeLine = useEditorStore((state) => state.setActiveCodeLine)
   const language = useSettingsStore((state) => state.language)
   const theme = useSettingsStore((state) => state.theme)
+  const textSize = useSettingsStore((state) => state.textSize)
+  const lineNumberFontSize = textSize === 'small' ? '13px' : textSize === 'large' ? '20px' : '16px'
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [cursorLine, setCursorLine] = useState(activePseudoLine ?? 1)
   const [scrollTop, setScrollTop] = useState(0)
@@ -171,6 +173,7 @@ function PseudocodePanel() {
             textAlign: 'left',
             paddingLeft: '10px',
             color: theme === 'light' ? 'rgba(67,70,79,0.42)' : 'rgba(255,255,255,0.38)',
+            fontSize: lineNumberFontSize,
             lineHeight: '25.6px',
             fontFamily: 'inherit',
             pointerEvents: 'none',
