@@ -294,6 +294,18 @@ body.light-mode .attachment-card:hover * {
   color: #43464f !important;
 }
 
+body.light-mode .attachment-card .terminal-button:hover,
+body.light-mode .attachment-card .terminal-button:hover * {
+  background: #43464f !important;
+  color: #eaeaeb !important;
+  border-color: #43464f !important;
+}
+
+body.light-mode .vote-button:hover,
+body.light-mode .vote-button:hover * {
+  color: #eaeaeb !important;
+}
+
 .difficulty-badge.difficulty-easy {
   color: #7ed957 !important;
 }

@@ -1377,10 +1377,10 @@ function CommunityPage() {
               {selectedProblem.difficulty.toUpperCase()}
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <button type="button" className="terminal-button" disabled={isVoting} onClick={() => void handleVote('up')}>
+              <button type="button" className="terminal-button vote-button" disabled={isVoting} onClick={() => void handleVote('up')}>
                 <span className={myVote === 'up' ? 'community-upvote-active' : undefined} style={{ color: myVote === 'up' ? '#7ed957' : undefined }}>[ ▲ {selectedProblem.upvoteCount} ]</span>
               </button>
-              <button type="button" className="terminal-button" disabled={isVoting} onClick={() => void handleVote('down')}>
+              <button type="button" className="terminal-button vote-button" disabled={isVoting} onClick={() => void handleVote('down')}>
                 <span className={myVote === 'down' ? 'community-downvote-active' : undefined} style={{ color: myVote === 'down' ? '#ff6b6b' : undefined }}>[ ▼ {selectedProblem.downvoteCount} ]</span>
               </button>
               <button type="button" className="terminal-button" onClick={() => void handleCopyProblemLink()}>
