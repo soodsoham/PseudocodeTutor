@@ -1,0 +1,14 @@
+name = "soham-pseudowizard"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-08-25"
+compatibility_flags = ["nodejs_compat"]
+
+[placement]
+mode = "smart"
+
+[[kv_namespaces]]
+binding = "PDF_FILES"
+id = "bf33c94567934591b48fee3bc90fddf6"
+
+[ai]
+binding = "AI"
