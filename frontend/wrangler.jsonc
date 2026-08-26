@@ -10,5 +10,8 @@
       "binding": "PDF_FILES",
       "id": "bf33c94567934591b48fee3bc90fddf6"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }
