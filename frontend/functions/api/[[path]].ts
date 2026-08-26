@@ -419,12 +419,13 @@ async function handleCommunity(context: Context, path: string) {
   }
 
   if (request.method === 'GET' && attachmentListMatch) {
+    const requesterId = await currentUserId(request, env)
     const rows = await sql.query(
       `select a.id,a.file_name,a.file_type,a.object_key from public.community_attachments a
        join public.community_problems p on p.id=a.problem_id
-       where a.problem_id=$1 and p.is_public=true and p.status='approved' and p.moderation_status='approved'
+       where a.problem_id=$1 and ((p.is_public=true and p.status='approved' and p.moderation_status='approved') or a.owner_id=$2)
        order by a.created_at`,
-      [attachmentListMatch[1]],
+      [attachmentListMatch[1], requesterId],
     )
     return json({ attachments: rows.map((row) => ({ ...row, stored_name: row.object_key, url: `/community/attachments/${encodeURIComponent(String(row.object_key).replace('/', '__'))}` })) })
   }

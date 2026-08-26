@@ -69,6 +69,8 @@ function MySubmissionsPage() {
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState<string | null>(null)
+  const [isLoadingAttachment, setIsLoadingAttachment] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -157,6 +159,33 @@ function MySubmissionsPage() {
     setSelectedSubmission(item)
     setIsEditing(false)
     setShowDeleteConfirm(false)
+    setAttachmentPreviewUrl(null)
+    setIsLoadingAttachment(true)
+    void (async () => {
+      try {
+        const response = await fastapi.get<{
+          attachments?: Array<{ url?: unknown; file_type?: unknown; file_name?: unknown }>
+        }>(`/community/problems/${encodeURIComponent(item.id)}/attachments`)
+        const attachment = (response.data.attachments ?? []).find((candidate) => {
+          const type = typeof candidate.file_type === 'string' ? candidate.file_type.toLowerCase() : ''
+          const name = typeof candidate.file_name === 'string' ? candidate.file_name.toLowerCase() : ''
+          return type.includes('pdf') || name.endsWith('.pdf')
+        })
+        if (typeof attachment?.url === 'string' && attachment.url.trim()) {
+          const base = (fastapi.defaults.baseURL ?? '').replace(/\/$/, '')
+          const url = attachment.url.trim()
+          setAttachmentPreviewUrl(
+            url.startsWith('http://') || url.startsWith('https://')
+              ? url
+              : `${base}${url.startsWith('/') ? '' : '/'}${url}`,
+          )
+        }
+      } catch {
+        // A pending/deleted attachment should not prevent viewing the submission.
+      } finally {
+        setIsLoadingAttachment(false)
+      }
+    })()
   }
 
   const handleEditSubmission = () => {
@@ -438,6 +467,37 @@ function MySubmissionsPage() {
             ) : (
               <div style={{ whiteSpace: 'pre-wrap', color: '#ffffff', fontSize: '14px' }}>
                 {selectedSubmission.description}
+              </div>
+            )}
+            {isLoadingAttachment && (
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
+                Loading attached PDF...
+              </div>
+            )}
+            {attachmentPreviewUrl && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  minHeight: '420px',
+                }}
+              >
+                <div className="terminal-label" style={{ fontSize: '18px' }}>
+                  [ Attached PDF ]
+                </div>
+                <iframe
+                  title="Attached PDF preview"
+                  src={attachmentPreviewUrl}
+                  style={{
+                    width: '100%',
+                    minHeight: '520px',
+                    flex: 1,
+                    border: '2px solid #ababb6',
+                    borderRadius: '4px',
+                    background: '#ffffff',
+                  }}
+                />
               </div>
             )}
           </div>
