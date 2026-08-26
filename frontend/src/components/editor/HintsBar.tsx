@@ -121,7 +121,8 @@ function HintsBar() {
                   alignSelf: message.role === 'student' ? 'flex-end' : 'flex-start',
                   maxWidth: '92%',
                   padding: '7px 10px',
-                  border: '1px solid var(--terminal-border, rgba(255,255,255,0.2))',
+                  border: '2px solid #ababb6',
+                  borderRadius: '4px',
                   background: message.role === 'student' ? 'rgba(100,150,255,0.12)' : 'rgba(255,255,255,0.04)',
                   whiteSpace: 'pre-wrap',
                 }}

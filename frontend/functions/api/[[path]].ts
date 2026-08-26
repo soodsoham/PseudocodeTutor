@@ -459,11 +459,14 @@ async function handleCommunity(context: Context, path: string) {
     const cachedText = typeof cached[0]?.solution === 'string' ? cached[0].solution : ''
     // Older generations sometimes violated exam instructions by redeclaring
     // pre-supplied arrays. Regenerate those answers once with the stricter prompt.
-    const staleCachedAnswer = /DECLARE\s+(NUM_STUDENTS|NUM_DAYS|StudentNames?)\b/i.test(cachedText)
+    const staleCachedAnswer = /DECLARE\s+(NUM_STUDENTS|NUM_DAYS|StudentNames?)\b/i.test(cachedText) || /\[\s*$/.test(cachedText)
     if (cachedText && !staleCachedAnswer) return json({ pseudocode: cachedText, cached: true })
     const attachmentText = clean(body.pdf_text, 24000)
     const prompt = `Write a complete, correct ${clean(body.board, 80) || 'CIE IGCSE'} pseudocode model answer. Output only pseudocode with concise // comments explaining the logic.\n\nStrict exam instructions:\n- Treat every variable, array, and value explicitly stated as already provided as pre-existing. Do NOT DECLARE, initialise, resize, or rename any pre-supplied data.\n- Read the entire question and attached reference text before solving. Follow every bullet and constraint; never invent requirements or constants.\n- Use the exact identifiers and indexing conventions from the question.\n- You may declare only local loop counters/accumulators if the question allows it, but do not declare arrays that the question says already exist.\n- Before returning, audit that every required input, calculation, condition, conversion, and output is present and that the pseudocode is syntactically valid for the requested board.\n\nProblem title: ${clean(body.title, 200)}\nProblem:\n${clean(body.description)}\n\nAttached/reference PDF text (use as specification context):\n${attachmentText || '(none)'}`
-    const solution = await geminiText(env, prompt, 6000)
+    let solution = await geminiText(env, prompt, 6000)
+    if (/\[\s*$/.test(solution)) {
+      solution = await geminiText(env, `${prompt}\n\nThe previous draft ended mid-line. Regenerate the complete answer from the beginning. Do not stop until every required bullet is implemented and the final line is complete.`, 6000)
+    }
     await sql.query(
       `insert into public.community_ai_solutions (problem_id,solution) values ($1,$2)
        on conflict (problem_id) do update set solution=excluded.solution,updated_at=now()`,
