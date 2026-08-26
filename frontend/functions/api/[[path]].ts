@@ -277,18 +277,6 @@ async function handleCommunity(context: Context, path: string) {
   const attachmentListMatch = path.match(/^community\/problems\/([0-9a-f-]+)\/attachments$/i)
   const attachmentOpenMatch = path.match(/^community\/attachments\/([a-zA-Z0-9._-]+)$/)
 
-  // Keep the interaction tables available on deployments where migrations have
-  // not yet been run manually.
-  await sql.query(`create table if not exists public.community_problem_votes (
-    problem_id uuid not null references public.community_problems(id) on delete cascade,
-    user_id text not null,
-    vote text not null check (vote in ('up','down')),
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-    primary key (problem_id, user_id)
-  )`)
-  await sql.query(`create index if not exists community_problem_votes_problem_idx on public.community_problem_votes(problem_id)`)
-
   if (request.method === 'GET' && path === 'community/problems') return listProblems(request, env)
 
   if (request.method === 'GET' && problemMatch) {
@@ -315,15 +303,27 @@ async function handleCommunity(context: Context, path: string) {
     if (!vote) return json({ ok: false, error: 'Vote must be up or down.' }, 400)
     const problem = await sql.query('select 1 from public.community_problems where id=$1 and is_public=true', [voteMatch[1]])
     if (!problem[0]) return json({ ok: false, error: 'Problem not found.' }, 404)
-    const existing = await sql.query('select vote from public.community_problem_votes where problem_id=$1 and user_id=$2', [voteMatch[1], userId])
-    if (existing[0]?.vote === vote) {
-      await sql.query('delete from public.community_problem_votes where problem_id=$1 and user_id=$2', [voteMatch[1], userId])
-    } else {
-      await sql.query(`insert into public.community_problem_votes(problem_id,user_id,vote) values($1,$2,$3)
-        on conflict(problem_id,user_id) do update set vote=excluded.vote,updated_at=now()`, [voteMatch[1], userId, vote])
-    }
-    const counts = await sql.query(`select count(*) filter (where vote='up')::integer as upvotes, count(*) filter (where vote='down')::integer as downvotes from public.community_problem_votes where problem_id=$1`, [voteMatch[1]])
-    return json({ ok: true, upvotes: counts[0]?.upvotes ?? 0, downvotes: counts[0]?.downvotes ?? 0, vote: existing[0]?.vote === vote ? null : vote })
+    const counts = await sql.query(`
+      with current_vote as (
+        select vote from public.community_problem_votes where problem_id=$1 and user_id=$2
+      ), base as (
+        select count(*) filter (where vote='up')::integer as upvotes,
+               count(*) filter (where vote='down')::integer as downvotes
+        from public.community_problem_votes where problem_id=$1 and user_id<>$2
+      ), deleted as (
+        delete from public.community_problem_votes
+        where problem_id=$1 and user_id=$2 and vote=$3
+        returning 1
+      ), upserted as (
+        insert into public.community_problem_votes(problem_id,user_id,vote)
+        select $1,$2,$3 where not exists (select 1 from deleted)
+        on conflict(problem_id,user_id) do update set vote=excluded.vote,updated_at=now()
+      )
+      select base.upvotes + case when exists(select 1 from deleted) then 0 when $3='up' then 1 else 0 end as upvotes,
+             base.downvotes + case when exists(select 1 from deleted) then 0 when $3='down' then 1 else 0 end as downvotes,
+             not exists(select 1 from deleted) as active
+      from base`, [voteMatch[1], userId, vote])
+    return json({ ok: true, upvotes: counts[0]?.upvotes ?? 0, downvotes: counts[0]?.downvotes ?? 0, vote: counts[0]?.active ? vote : null })
   }
 
   if (request.method === 'POST' && path === 'community/report') {
