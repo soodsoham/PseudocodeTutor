@@ -40,12 +40,22 @@ function CodePanel() {
   }
 
   return (
-    <section className="terminal-panel panel" style={{ minHeight: '100%' }}>
+    <section className="terminal-panel panel" style={{ minHeight: '100%', overflow: 'hidden' }}>
       <div className="terminal-label">[ Program Code ]</div>
-      <div style={{ position: 'relative', minHeight: 0, flex: 1, marginTop: '4px' }}>
+      <div
+        style={{
+          position: 'relative',
+          minHeight: 0,
+          flex: '1 1 auto',
+          marginTop: '4px',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         <div
           className="panel-scroll panel-content"
-          style={{ overflowX: 'auto', overflowY: 'auto' }}
+          style={{ flex: '1 1 auto', minHeight: 0, minWidth: 0, overflowX: 'auto', overflowY: 'auto' }}
         >
         {codeLines.map((line, index) => {
           const lineNumber = index + 1

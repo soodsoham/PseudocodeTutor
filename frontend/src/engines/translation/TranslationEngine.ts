@@ -217,6 +217,7 @@ const SIMPLE_CLOSER_PATTERNS: Array<{ pattern: RegExp; blockType: BlockType }> =
   { pattern: /^ENDFUNCTION\b/i, blockType: 'FUNCTION' },
   { pattern: /^ENDCASE\b/i, blockType: 'CASE' },
   { pattern: /^NEXT\b/i, blockType: 'FOR' },
+  { pattern: /^END\s+FOR\b/i, blockType: 'FOR' },
 ]
 
 function getIndent(level: number) {
@@ -679,9 +680,10 @@ function translateConcreteLinePython(
   let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
   if (match) return [`${indent}${match[1]} = ${match[2].trim()}`]
 
-  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:(?:←|<-|->)\s*(.+)|FROM\s+(.+?))\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
-    const [, variable, start, end, step = '1'] = match
+    const [, variable, arrowStart, fromStart, end, step = '1'] = match
+    const start = arrowStart ?? fromStart
     return [`${indent}for ${variable} in range(${start.trim()}, ${end.trim()} + (${step.trim()} if (${step.trim()}) > 0 else -1), ${step.trim()}):`]
   }
 
@@ -735,9 +737,17 @@ function translateConcreteLinePython(
     return [`${indent}${target} = ${value}`]
   }
 
-  match = trimmed.match(/^([A-Za-z_]\w*)\s*=\s*(?!=)(.+)$/)
+  match = trimmed.match(/^(.+?)\s*=\s*(?!=)(.+)$/)
   if (match) {
-    return [`${indent}${match[1]} = ${match[2].trim()}`]
+    const target = match[1].trim()
+    const indexedTarget = extractIndexedTargetParts(target)
+    if (indexedTarget && !knownVariables.has(indexedTarget.base)) {
+      return [
+        `${indent}if '${indexedTarget.base}' not in locals(): ${indexedTarget.base} = {}`,
+        `${indent}${indexedTarget.base}[${indexedTarget.indexExpr}] = ${match[2].trim()}`,
+      ]
+    }
+    return [`${indent}${target} = ${match[2].trim()}`]
   }
 
   match = trimmed.match(/^OUTPUT\s+(.+)$/i)
@@ -807,9 +817,10 @@ function translateConcreteLineJava(
   let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
   if (match) return [`${indent}final var ${match[1]} = ${match[2].trim()};`]
 
-  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:(?:←|<-|->)\s*(.+)|FROM\s+(.+?))\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
-    const [, variable, start, end, step = '1'] = match
+    const [, variable, arrowStart, fromStart, end, step = '1'] = match
+    const start = arrowStart ?? fromStart
     const increment = step.trim() === '1' ? `${variable}++` : `${variable} += ${step.trim()}`
     return [`${indent}for (int ${variable} = ${start.trim()}; ${variable} <= ${end.trim()}; ${increment}) {`]
   }
@@ -928,9 +939,10 @@ function translateConcreteLineCpp(
   let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
   if (match) return [`${indent}const auto ${match[1]} = ${match[2].trim()};`]
 
-  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:(?:←|<-|->)\s*(.+)|FROM\s+(.+?))\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
-    const [, variable, start, end, step = '1'] = match
+    const [, variable, arrowStart, fromStart, end, step = '1'] = match
+    const start = arrowStart ?? fromStart
     const increment = step.trim() === '1' ? `${variable}++` : `${variable} += ${step.trim()}`
     return [`${indent}for (int ${variable} = ${start.trim()}; ${variable} <= ${end.trim()}; ${increment}) {`]
   }
@@ -1050,9 +1062,10 @@ function translateConcreteLineVb(
   let match = trimmed.match(/^CONSTANT\s+(\w+)\s*=\s*(.+)$/i)
   if (match) return [`${indent}Const ${match[1]} = ${match[2].trim()}`]
 
-  match = trimmed.match(/^FOR\s+(\w+)\s*(?:←|<-|->)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
+  match = trimmed.match(/^FOR\s+(\w+)\s*(?:(?:←|<-|->)\s*(.+)|FROM\s+(.+?))\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/i)
   if (match) {
-    const [, variable, start, end, step] = match
+    const [, variable, arrowStart, fromStart, end, step] = match
+    const start = arrowStart ?? fromStart
     if (knownVariables.has(variable)) {
       return [`${indent}For ${variable} = ${start.trim()} To ${end.trim()}${step ? ` Step ${step.trim()}` : ''}`]
     }
@@ -1478,7 +1491,7 @@ function translateBlockLanguage(
     }
 
     // Block openers — push stack and increase indent after emitting the opening line
-    if (/^FOR\s+\w+\s*(?:←|<-|->)\s*.+\s+TO\s+.+?(?:\s+STEP\s+.+)?$/i.test(trimmed)) {
+    if (/^FOR\s+\w+\s*(?:(?:←|<-|->)\s*.+|FROM\s+.+?)\s+TO\s+.+?(?:\s+STEP\s+.+)?$/i.test(trimmed)) {
       blockStack.push('FOR')
       indentLevel += 1
     } else if (/^WHILE\s+.+\s+DO$/i.test(trimmed)) {

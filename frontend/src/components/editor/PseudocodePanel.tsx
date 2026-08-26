@@ -7,6 +7,7 @@ const INDENT_UNIT = '      '
 const INDENT_SIZE = INDENT_UNIT.length
 const DEDENT_KEYWORDS = [
   'NEXT',
+  'END FOR',
   'ENDWHILE',
   'ENDIF',
   'ENDFOR',
