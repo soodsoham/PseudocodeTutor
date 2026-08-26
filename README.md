@@ -2,7 +2,7 @@
 
 React/Vite frontend plus a FastAPI backend. Supabase provides authentication and persistent data; Gemini provides hints, moderation, and generated solutions.
 
-> Copyright © 2026 Soham Sood. All rights reserved. This repository is publicly
+> Copyright © 2026 soodsoham. All rights reserved. This repository is publicly
 > viewable for educational and portfolio evaluation only; reuse or redistribution
 > requires prior written permission. See [LICENSE](LICENSE).
 
