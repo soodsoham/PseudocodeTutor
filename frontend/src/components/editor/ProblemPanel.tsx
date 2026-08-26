@@ -132,7 +132,6 @@ function ProblemPanel() {
         outputs: '',
         constraints: '',
       })
-      setProblemAttachmentText('')
       setIsProblemCardCollapsed(false)
     }, 500)
 
@@ -397,7 +396,13 @@ function ProblemPanel() {
 
           <textarea
             value={form.description}
-            onChange={(event) =>
+            onChange={(event) => {
+              // Editing a loaded community problem makes its old PDF context
+              // stale. Clear it on the user's edit, not in the debounced
+              // form-sync effect; otherwise a slow PDF fetch can be erased
+              // just after it finishes and hints lose the reference text.
+              setProblemAttachmentText('')
+              setProblemAttachmentPreviewUrl(null)
               setForm((current) => ({
                 ...current,
                 description: event.target.value,
@@ -405,7 +410,7 @@ function ProblemPanel() {
                 outputs: '',
                 constraints: '',
               }))
-            }
+            }}
             rows={6}
             placeholder="Describe your problem here... e.g. Write a program that asks for a number and outputs whether it is odd or even"
             onFocus={() => {
