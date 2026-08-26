@@ -440,7 +440,6 @@ function CommunityPage() {
       setPendingDeleteSolutionId(null)
       setAiSolution(null)
       setSolutions([])
-      setMyVote(null)
 
       const userSolutionsPromise = (async () => {
         const fetchQueueSolutions = async () => {
@@ -617,6 +616,7 @@ function CommunityPage() {
   }, [activeBoard, selectedProblem?.id])
 
   useEffect(() => {
+    setMyVote(null)
     setExpandedAttachmentPreview(false)
     setAttachmentPreviewZoom(1)
     setAttachmentPreviewPages([])
