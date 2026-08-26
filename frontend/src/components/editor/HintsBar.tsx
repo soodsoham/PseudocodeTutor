@@ -75,12 +75,12 @@ function HintsBar() {
           gridTemplateColumns: 'minmax(0, 1fr)',
           gridTemplateRows: 'auto minmax(0, 1fr)',
           gap: '16px',
-          alignItems: 'start',
+          alignItems: 'stretch',
           height: '100%',
           minHeight: 0,
         }}
       >
-        <div className="terminal-label" style={{ fontSize: '18px', whiteSpace: 'nowrap' }}>
+        <div className="terminal-label" style={{ fontSize: '18px', whiteSpace: 'nowrap', alignSelf: 'start' }}>
           [ Hint Bar ]
         </div>
         <div
