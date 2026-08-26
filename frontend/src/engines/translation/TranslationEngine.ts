@@ -147,15 +147,38 @@ function buildImplicitPythonArrayInitLines(sourceLines: string[]) {
 
   const readArrays = new Set<string>()
   const writtenArrays = new Set<string>()
+  const indexedDimensions = new Map<string, number>()
+  const implicitBounds = new Set<string>()
+  const definedNames = new Set<string>()
 
   sourceLines.forEach((line) => {
     const trimmed = line.trim()
     extractIndexedBaseNames(trimmed).forEach((baseName) => readArrays.add(baseName))
 
-    const assignmentMatch = trimmed.match(/^(.+?)\s*(?:←|<-|->)\s*.+$/)
+    for (const match of trimmed.matchAll(/([A-Za-z_]\w*)\s*\[([^\]]+)\]/g)) {
+      indexedDimensions.set(match[1], Math.max(indexedDimensions.get(match[1]) ?? 1, match[2].includes(',') ? 2 : 1))
+    }
+
+    const forMatch = trimmed.match(/^FOR\s+\w+\s*(?:(?:←|<-|->)\s*([^\s]+)|FROM\s+([^\s]+))\s+TO\s+([^\s]+)(?:\s+STEP\s+[^\s]+)?$/i)
+    if (forMatch) {
+      for (const bound of [forMatch[1], forMatch[2], forMatch[3]]) {
+        if (bound && isSimpleIdentifier(bound)) implicitBounds.add(bound)
+      }
+    }
+
+    const inputMatch = trimmed.match(/^INPUT\s+(.+)$/i)
+    if (inputMatch) definedNames.add(extractBaseIdentifier(parseInputSpec(inputMatch[1]).target) ?? '')
+    const declareMatch = trimmed.match(/^DECLARE\s+(.+?)\s*:/i)
+    if (declareMatch) {
+      declareMatch[1].split(',').map((name) => name.trim()).filter(isSimpleIdentifier).forEach((name) => definedNames.add(name))
+    }
+
+    const assignmentMatch = trimmed.match(/^(.+?)\s*(?:←|<-|->|=)\s*.+$/)
     if (assignmentMatch) {
       const lhsBaseNames = extractIndexedBaseNames(assignmentMatch[1])
       lhsBaseNames.forEach((baseName) => writtenArrays.add(baseName))
+      const scalarTarget = extractBaseIdentifier(assignmentMatch[1])
+      if (scalarTarget) definedNames.add(scalarTarget)
     }
   })
 
@@ -163,15 +186,22 @@ function buildImplicitPythonArrayInitLines(sourceLines: string[]) {
     (baseName) => !writtenArrays.has(baseName),
   )
 
-  if (arraysToInitialize.length === 0) {
+  const scalarInitializers = Array.from(implicitBounds)
+    .filter((name) => !definedNames.has(name))
+    .map((name) => `${name} = ${/day/i.test(name) ? '7' : '10'}`)
+
+  if (arraysToInitialize.length === 0 && scalarInitializers.length === 0) {
     return [] as string[]
   }
 
   return [
     'import random',
     ...arraysToInitialize.map(
-      (baseName) => `${baseName} = {i: random.randint(10, 99) for i in range(1, 11)}`,
+      (baseName) => indexedDimensions.get(baseName) === 2
+        ? `${baseName} = {(i, j): random.randint(10, 99) for i in range(1, 11) for j in range(1, 8)}`
+        : `${baseName} = {i: random.randint(10, 99) for i in range(1, 11)}`,
     ),
+    ...scalarInitializers,
   ]
 }
 
@@ -211,11 +241,11 @@ function buildImplicitVbArrayInitLines(sourceLines: string[]) {
 }
 
 const SIMPLE_CLOSER_PATTERNS: Array<{ pattern: RegExp; blockType: BlockType }> = [
-  { pattern: /^ENDIF\b/i, blockType: 'IF' },
-  { pattern: /^ENDWHILE\b/i, blockType: 'WHILE' },
-  { pattern: /^ENDPROCEDURE\b/i, blockType: 'PROCEDURE' },
-  { pattern: /^ENDFUNCTION\b/i, blockType: 'FUNCTION' },
-  { pattern: /^ENDCASE\b/i, blockType: 'CASE' },
+  { pattern: /^END\s*IF\b/i, blockType: 'IF' },
+  { pattern: /^END\s*WHILE\b/i, blockType: 'WHILE' },
+  { pattern: /^END\s*PROCEDURE\b/i, blockType: 'PROCEDURE' },
+  { pattern: /^END\s*FUNCTION\b/i, blockType: 'FUNCTION' },
+  { pattern: /^END\s*CASE\b/i, blockType: 'CASE' },
   { pattern: /^NEXT\b/i, blockType: 'FOR' },
   { pattern: /^END\s+FOR\b/i, blockType: 'FOR' },
 ]
@@ -637,7 +667,7 @@ function buildKnownVariables(sourceLines: string[], upToIndex: number): Set<stri
       declareSpec.names.forEach((name) => knownVariables.add(name))
     }
 
-    match = previousTrimmed.match(/^(?!FOR\b)(.+?)\s*(?:←|<-|->)\s*.+$/i)
+    match = previousTrimmed.match(/^(?!FOR\b)(.+?)\s*(?:←|<-|->|=)\s*(?!=).+$/i)
     if (match) {
       const baseName = extractBaseIdentifier(match[1])
       if (baseName) {
@@ -752,7 +782,14 @@ function translateConcreteLinePython(
 
   match = trimmed.match(/^OUTPUT\s+(.+)$/i)
   if (match) {
-    return [`${indent}print(${stripElseFromOutput(match[1]).replace(/\s*&\s*/g, ', ')})`]
+    const outputExpression = stripElseFromOutput(match[1]).trim()
+    // Pseudocode commonly joins a message and a numeric value with `+`.
+    // Python cannot concatenate a string and an integer, so print them as
+    // separate arguments while preserving arithmetic-only expressions.
+    const pythonOutput = /["']/.test(outputExpression)
+      ? outputExpression.replace(/\s*(?:&|\+)\s*/g, ', ')
+      : outputExpression.replace(/\s*&\s*/g, ', ')
+    return [`${indent}print(${pythonOutput})`]
   }
 
   match = trimmed.match(/^INPUT\s+(.+)$/i)

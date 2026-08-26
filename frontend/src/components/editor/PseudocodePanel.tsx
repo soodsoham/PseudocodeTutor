@@ -8,6 +8,10 @@ const INDENT_SIZE = INDENT_UNIT.length
 const DEDENT_KEYWORDS = [
   'NEXT',
   'END FOR',
+  'END IF',
+  'END WHILE',
+  'END PROCEDURE',
+  'END FUNCTION',
   'ENDWHILE',
   'ENDIF',
   'ENDFOR',
