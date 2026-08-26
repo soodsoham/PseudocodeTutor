@@ -336,7 +336,7 @@ function MySubmissionsPage() {
               <button
                 type="button"
                 className="terminal-button"
-                onClick={() => navigate('/community')}
+                onClick={() => navigate(`/problem/${encodeURIComponent(selectedSubmission.id)}`)}
               >
                 [ Open In Community ]
               </button>
