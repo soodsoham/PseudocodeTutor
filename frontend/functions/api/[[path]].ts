@@ -326,17 +326,6 @@ async function handleCommunity(context: Context, path: string) {
     return json({ ok: true, upvotes: counts[0]?.upvotes ?? 0, downvotes: counts[0]?.downvotes ?? 0, vote: counts[0]?.active ? vote : null })
   }
 
-  if (request.method === 'POST' && path === 'community/report') {
-    const reporterId = await currentUserId(request, env)
-    const problemId = clean(body.problem_id, 80)
-    const reason = clean(body.reason, 1000)
-    if (!problemId || !reason) return json({ ok: false, error: 'A problem and report reason are required.' }, 400)
-    const problem = await sql.query('select 1 from public.community_problems where id=$1 and is_public=true', [problemId])
-    if (!problem[0]) return json({ ok: false, error: 'Problem not found.' }, 404)
-    await sql.query(`insert into public.moderation_queue(problem_id,content_type,reporter_id,reason,status) values($1,'problem_report',$2,$3,'pending')`, [problemId, reporterId, reason])
-    return json({ ok: true, message: 'Report submitted for review.' })
-  }
-
   if (request.method === 'POST' && path === 'community/submit') {
     const userId = await requireUser(request, env)
     const title = clean(body.title, 200)

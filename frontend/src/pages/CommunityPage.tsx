@@ -263,8 +263,6 @@ function CommunityPage() {
   >(null)
   const [showNewProblemForm, setShowNewProblemForm] = useState(false)
   const [submitMessage, setSubmitMessage] = useState<string | null>(null)
-  const [reportReason, setReportReason] = useState('')
-  const [isReporting, setIsReporting] = useState(false)
   const [myVote, setMyVote] = useState<'up' | 'down' | null>(null)
   const [isVoting, setIsVoting] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -1153,23 +1151,6 @@ function CommunityPage() {
     }
   }
 
-  const handleReport = async () => {
-    if (!selectedProblem || !reportReason.trim()) return
-    setIsReporting(true)
-    try {
-      await fastapi.post('/community/report', {
-        problem_id: String(selectedProblem.id),
-        reason: reportReason.trim(),
-      })
-      setReportReason('')
-      setSubmitMessage('Report submitted for review.')
-    } catch {
-      setSubmitMessage('Could not submit the report right now.')
-    } finally {
-      setIsReporting(false)
-    }
-  }
-
   const handleCopyProblemLink = async () => {
     if (!selectedProblem) return
     const link = `${window.location.origin}/problem/${selectedProblem.id}`
@@ -1402,18 +1383,6 @@ function CommunityPage() {
               </button>
               <button type="button" className="terminal-button" onClick={() => void handleCopyProblemLink()}>
                 [ Copy Link ]
-              </button>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input
-                value={reportReason}
-                onChange={(event) => setReportReason(event.target.value)}
-                placeholder="Report reason..."
-                aria-label="Report reason"
-                style={{ flex: '1 1 260px', minWidth: 0, height: '44px', boxSizing: 'border-box', padding: '8px 10px', font: 'inherit', color: '#ffffff', background: '#43464f', border: '2px solid #ababb6', borderRadius: '4px' }}
-              />
-              <button type="button" className="terminal-button" disabled={isReporting || !reportReason.trim()} style={{ height: '44px', boxSizing: 'border-box' }} onClick={() => void handleReport()}>
-                {isReporting ? '[ Reporting... ]' : '[ Report ]'}
               </button>
             </div>
             <div style={{ whiteSpace: 'pre-wrap', color: '#ffffff', fontSize: '14px' }}>
