@@ -71,6 +71,11 @@ const boardLabels: Record<string, string> = {
   'aqa-a-level': 'AQA A Level',
 }
 
+// Keep the unlimited-upload/admin allowance restricted to the configured
+// owner account. An empty or missing build variable must never make everyone
+// an admin.
+const ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase()
+
 const boardOptions = [
   { label: 'CIE IGCSE', value: 'cie-igcse' },
   { label: 'CIE A Level', value: 'cie-a-level' },
@@ -849,10 +854,7 @@ function CommunityPage() {
     }
 
     setIsSubmitting(true)
-    // This deployment currently has one authenticated account. Treat the
-    // signed-in owner as admin so provider-specific email fields cannot lock
-    // the owner out of the unlimited upload allowance.
-    const isAdmin = Boolean(user)
+    const isAdmin = ADMIN_EMAIL.length > 0 && user.email?.trim().toLowerCase() === ADMIN_EMAIL
     const todayKey = getTodayKey()
 
     if (!isAdmin) {
