@@ -208,6 +208,12 @@ body.light-mode .hint-bar-content {
   color: #43464f !important;
 }
 
+body.light-mode .hint-input-shell {
+  background: #eaeaeb !important;
+  color: #43464f !important;
+  border-color: #8a8d96 !important;
+}
+
 body.light-mode .problem-divider {
   border-color: #8a8d96 !important;
 }
